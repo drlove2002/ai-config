@@ -1,2 +1,17 @@
+# macOS
 .DS_Store
+
+# Editor files
 *.swp
+*.swo
+.vscode/
+.idea/
+
+# Node/TS (if testing extensions standalone)
+node_modules/
+dist/
+*.log
+
+# Temp files
+.tmp/
+cache/
