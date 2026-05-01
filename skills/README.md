@@ -1,3 +1,9 @@
+---
+name: skills-overview
+description: Overview of available skills. Not an executable skill.
+disable-model-invocation: true
+---
+
 # Agent Skills
 
 Personal agent skills for reusable coding, planning, triage, and documentation workflows across languages and ecosystems.
