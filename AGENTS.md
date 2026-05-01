@@ -25,6 +25,7 @@ When working, always respect instructions in this order:
 - **Inspect first**: Always read files or use search tools (`rg`) before making edits.
 - **Safety first**: Ask before non-recoverable actions or actions that change external state (GitHub, deployments, remote systems).
 - **Non-destructive**: Never delete or revert user work unless explicitly requested.
+- **Temporary Files & Testing**: For any non-project-related testing, downloading files from the internet, or creating scratch files, ALWAYS use the Linux temporary directory (e.g., `/tmp`). Do not pollute the active workspace or the user's home directory with temporary artifacts.
 
 ## System Configuration (NixOS)
 
