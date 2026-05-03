@@ -1,0 +1,7 @@
+{
+  "name": "pi-status-bar",
+  "type": "module",
+  "pi": {
+    "extensions": ["./index.ts"]
+  }
+}
