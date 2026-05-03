@@ -24,13 +24,15 @@ export default function clearCommandExtension(pi: ExtensionAPI) {
 			}
 
 			// Start a new session to reset in-memory state
-			const result = await ctx.newSession();
+			const result = await ctx.newSession({
+				withSession: async (newCtx) => {
+					newCtx.ui.notify("Session cleared permanently.", "success");
+				}
+			});
 			if (result.cancelled) {
 				ctx.ui.notify("Session clear cancelled.", "warning");
 				return;
 			}
-
-			ctx.ui.notify("Session cleared permanently.", "success");
 		}
 	});
 }

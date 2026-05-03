@@ -23,12 +23,28 @@ interface Answer {
  * Renders a rich TUI SelectList using the Pi component system.
  */
 async function interactiveSelect<T>(ctx: any, title: string, items: SelectItem<T>[]): Promise<T | null> {
+	const hotkeys = "abcdefghilmnopqrstuvwxyz123456789";
+	let hotkeyIndex = 0;
+	const hotkeyMap = new Map<string, T>();
+
+	const displayItems: SelectItem<T>[] = items.map(item => {
+		if (hotkeyIndex < hotkeys.length) {
+			const key = hotkeys[hotkeyIndex++];
+			hotkeyMap.set(key, item.value);
+			return {
+				...item,
+				label: `[${key}] ${item.label}`
+			};
+		}
+		return item; // no hotkey if too many
+	});
+
 	return await ctx.ui.custom((tui: any, theme: any, _kb: any, done: (val: T | null) => void) => {
 		const container = new Container();
 		container.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
 		container.addChild(new Text(theme.fg("accent", theme.bold(title)), 1, 0));
 
-		const selectList = new SelectList(items, Math.min(items.length, 15), {
+		const selectList = new SelectList(displayItems, Math.min(displayItems.length, 15), {
 			selectedPrefix: (t: string) => theme.fg("accent", t),
 			selectedText: (t: string) => theme.fg("accent", t),
 			description: (t: string) => theme.fg("muted", t),
@@ -40,13 +56,23 @@ async function interactiveSelect<T>(ctx: any, title: string, items: SelectItem<T
 		selectList.onCancel = () => done(null);
 
 		container.addChild(selectList);
-		container.addChild(new Text(theme.fg("dim", "↑↓ navigate • enter select • esc cancel"), 1, 0));
+		container.addChild(new Text(theme.fg("dim", "↑↓ navigate • enter select • letter keys fast-select • esc cancel"), 1, 0));
 		container.addChild(new DynamicBorder((s: string) => theme.fg("accent", s)));
 
 		return {
 			render: (w: number) => container.render(w),
 			invalidate: () => container.invalidate(),
-			handleInput: (data: string) => { selectList.handleInput?.(data); tui.requestRender(); },
+			handleInput: (data: string) => { 
+				if (data.length === 1) {
+					const key = data.toLowerCase();
+					if (hotkeyMap.has(key)) {
+						done(hotkeyMap.get(key)!);
+						return;
+					}
+				}
+				selectList.handleInput?.(data); 
+				tui.requestRender(); 
+			},
 		};
 	});
 }
