@@ -11,11 +11,47 @@ When working, always respect instructions in this order:
 3. Global rules & memories (`~/.config/ai/rules/` and `~/.config/ai/memories/`)
 4. This global `~/.config/ai/AGENTS.md`
 
-## Directory Structure & Usage
+## Directory Tree
 
-- **`/rules/`**: Operational policies, command allowlists, and global safety constraints. Consult these files to know *how* to behave, formulate plans, and execute workflows safely.
-- **`/memories/`**: Durable context, cross-project facts, and standing preferences. Consult these files to understand *who* the user is, technology choices, and long-term coding conventions.
-- **`/skills/`**: Executable capabilities, custom tools, and workflows. These are self-contained utilities loaded on-demand based on their descriptions to expand the agent's capabilities.
+```
+~/.config/ai/
+├── AGENTS.md              ← this file (global defaults, context resolution, subagent routing)
+├── agents/
+│   ├── AGENTS.md           ← subagent catalog (capabilities, models, tools per agent)
+│   ├── worker.md           ← general-purpose: read, write, edit, bash, browser (model: nvidia-nim/z-ai/glm-4.7)
+│   ├── scout.md            ← fast recon: read, grep, find, ls, bash, browser (model: gemini-3-flash)
+│   ├── planner.md          ← implementation plans: read, grep, find, ls, browser (model: openrouter-fallback/deepseek/deepseek-pro)
+│   ├── reviewer.md         ← code reviews: read, grep, find, ls, bash (read-only), browser
+│   └── browser.md          ← web research: browser, read, bash (model: gemini-3-flash)
+├── extensions/
+│   ├── clear-command.ts    ← /clear command (permanently delete session)
+│   ├── pi-rules.ts         ← search_ai_context tool + context directive
+│   ├── user-decisions.ts   ← interactive TUI questionnaire + /edit-decisions command
+│   └── subagent/           ← subagent tool (spawn isolated pi processes)
+├── memories/
+│   ├── AGENTS.md           ← memory directory guide
+│   ├── writing-style/           ← prose quality rules + references (phrases, structures, examples)
+│   ├── python-guidelines.md     ← Python coding standards
+│   ├── rust-guidelines.md       ← Rust coding standards + WWAPI focus
+│   └── nextjs-guidelines.md     ← Next.js App Router standards + WWPAGE focus
+├── rules/
+│   ├── AGENTS.md           ← rules directory guide
+│   ├── default.rules       ← command allowlist (nix, cargo, pnpm, git, psql, etc.)
+│   └── orchestrator.md     ← always-active session protocol (context hygiene, subagent routing, implementation discipline)
+├── skills/                 ← on-demand workflows (15 skills: TDD, bug triage, refactor plans, DDD, etc.)
+├── settings.json           ← default model: openrouter/deepseek/deepseek-v4-pro, thinking: low
+├── models.json             ← provider + model definitions (openrouter, groq, cloudflare, nvidia-nim)
+├── auth.json               ← API keys (permissions: 600)
+└── packages/               ← npm packages (pi-agent-browser)
+```
+
+## Directory Usage
+
+- **`agents/`**: Specialized subagent definitions (system prompts, tool sets, models). See `agents/AGENTS.md` for catalog.
+- **`extensions/`**: Custom TypeScript plugins for pi (tools, commands, system prompt hooks).
+- **`memories/`**: Durable tech preferences and project guidelines. See `memories/AGENTS.md` for index.
+- **`rules/`**: Operational policies and command allowlists. See `rules/AGENTS.md` for index.
+- **`skills/`**: Executable capabilities loaded on-demand based on task descriptions (18 skills available).
 
 ## Global Defaults
 
