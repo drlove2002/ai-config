@@ -1,0 +1,15 @@
+{
+  "name": "pi-tts",
+  "version": "1.0.0",
+  "type": "module",
+  "keywords": ["pi-package"],
+  "description": "Local text-to-speech for Pi using pocket-tts-cli",
+  "scripts": {
+    "postinstall": "bash setup.sh",
+    "test": "npx tsx test-parser.ts",
+    "speak": "npx tsx speak.ts"
+  },
+  "pi": {
+    "extensions": ["./index.ts"]
+  }
+}
