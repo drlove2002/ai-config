@@ -1,11 +1,6 @@
----
-name: stop-slop
-description: Remove AI writing patterns from prose. Use when drafting, editing, or reviewing text to eliminate predictable AI tells.
----
+# Writing Style
 
-# Stop Slop
-
-Eliminate predictable AI writing patterns from prose.
+Eliminate predictable AI writing patterns from all prose output. These rules apply whenever you produce text — articles, comments, PR descriptions, issue bodies, commit messages, and chat responses.
 
 ## Core Rules
 

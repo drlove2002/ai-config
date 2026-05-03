@@ -2,6 +2,13 @@
 
 Instructions for `~/.config/ai/memories`.
 
+## Files
+
+- **`writing-style/`** — Prose quality rules: cut filler, break formulaic structures, active voice, be specific. Applies to all text output (articles, comments, PRs, commit messages). Bundled references: phrases, structures, examples.
+- **`python-guidelines.md`** — Python coding standards: small functions, type hints, early returns, async patterns, context managers.
+- **`rust-guidelines.md`** — Rust coding standards: ownership clarity, modular files, domain types over bools, error context. Includes WWAPI-specific focus on state transitions and observability.
+- **`nextjs-guidelines.md`** — Next.js App Router standards: default to server components, thin client components, explicit caching, React Compiler patterns. Includes WWPAGE-specific focus (reactCompiler: true).
+
 ## Purpose
 
 - Store durable context that should survive across sessions

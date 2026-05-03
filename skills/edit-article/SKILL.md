@@ -11,4 +11,4 @@ Confirm the sections with the user.
 
 2. For each section:
 
-2a. Rewrite the section to improve clarity, coherence, and flow. Use maximum 240 characters per paragraph. Ensure you apply the rules from the `stop-slop` skill (`~/.config/ai/skills/stop-slop/SKILL.md`) to eliminate all AI writing patterns, filler phrases, and predictable structures.
+2a. Rewrite the section to improve clarity, coherence, and flow. Use maximum 240 characters per paragraph. Ensure you apply the rules from `~/.config/ai/memories/writing-style/writing-style.md` to eliminate all AI writing patterns, filler phrases, and predictable structures.
