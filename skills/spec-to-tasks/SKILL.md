@@ -12,10 +12,20 @@ Synthesize the current conversation and codebase context into a PRD, then break 
 Explore the repo to understand the current state of the codebase.
 Sketch out the major modules you will need to build or modify. Look for opportunities to extract deep modules that can be tested in isolation.
 
+**If the conversation already contains scouted codebase details (file paths, API formats, exact commands, dependency trees) — do not re-scout. Use what you already have.**
+
 ## 2. Generate the PRD (`issues/XXXX-prd-...`)
 
-Write the PRD using the template below and save it as a local Markdown issue in `issues/` at the current project root.
-Name the file with the next available four-digit ID and a short kebab-case slug, for example `issues/0001-prd-bulk-import.md`.
+Write the PRD and save it as a local Markdown issue in `issues/` at the current project root.
+Name the file with the next available four-digit ID and a short kebab-case slug, e.g. `issues/0001-prd-bulk-import.md`.
+
+**Two paths:**
+
+**Path A — No concrete plan yet**: When the conversation is still at the problem/idea stage and no implementation details exist, use the template as-is. Keep the PRD abstract — stakeholder-readable, no file paths or code snippets.
+
+**Path B — Concrete plan already exists**: When the conversation already has scouted details (exact file paths, API endpoints, response formats, build commands, Nix expression shapes), **preserve those details in the PRD**. The PRD is the canonical record of what was decided. Do not strip concrete details just because the abstract template says so. The template is a floor — include everything needed to execute.
+
+PRD frontmatter:
 
 ```yaml
 ---
@@ -28,7 +38,8 @@ created: YYYY-MM-DD
 ---
 ```
 
-<prd-template>
+PRD sections:
+
 ## Problem Statement
 The problem that the user is facing, from the user's perspective.
 
@@ -43,7 +54,7 @@ A numbered list (e.g., As an <actor>, I want a <feature>, so that <benefit>).
 - Interfaces modified
 - Architectural decisions
 - API contracts
-*(Do NOT include specific file paths or code snippets)*
+- **Path B only**: Include exact file paths, API endpoints, response formats, shell commands, Nix expression shapes — every concrete detail the conversation established.
 
 ## Testing Decisions
 - What makes a good test here
@@ -51,7 +62,6 @@ A numbered list (e.g., As an <actor>, I want a <feature>, so that <benefit>).
 
 ## Out of Scope
 Things out of scope for this PRD.
-</prd-template>
 
 ## 3. Ask User for Task Breakdown
 
@@ -70,8 +80,10 @@ If they choose "No", stop here. If "Yes", proceed to Step 4.
 
 ## 4. Break Down into Vertical Slices
 
-Draft vertical slices (tracer bullets) that cut through ALL integration layers end-to-end (DB, API, UI). Do not slice by layer.
+Draft vertical slices (tracer bullets) that cut through ALL integration layers end-to-end. Do not slice by layer.
 Each slice must be deliverable on its own.
+
+**If Path B (concrete plan exists)**: slices should reference the concrete details from the PRD — specific files, APIs, commands per slice.
 
 Classify each slice as:
 - **AFK**: Can be implemented and merged without human interaction.
@@ -85,6 +97,8 @@ Wait for their approval before generating the files.
 
 For each approved slice, create a local Markdown issue file in `issues/` in dependency order.
 
+**If Path B**: tracking issues include the concrete file paths, API details, and commands from the PRD. The agent picking up the issue should have everything needed to execute without re-reading the PRD.
+
 ```yaml
 ---
 id: 0002
@@ -97,7 +111,6 @@ created: YYYY-MM-DD
 ---
 ```
 
-<issue-template>
 ## Parent
 `issues/0001-prd-bulk-import.md`
 
@@ -110,4 +123,3 @@ A concise description of this vertical slice end-to-end.
 
 ## Blocked by
 - Blocked by `issues/0002-api-setup.md` (or "None")
-</issue-template>
