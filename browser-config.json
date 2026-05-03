@@ -1,0 +1,5 @@
+{
+  "executablePath": "/etc/profiles/per-user/love/bin/chromium",
+  "ignoreHttpsErrors": true,
+  "headless": true
+}
