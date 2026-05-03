@@ -2,7 +2,7 @@
 name: reviewer
 description: Code review specialist for quality and security analysis
 tools: read, grep, find, ls, bash, browser
-model: nvidia-nim/meta/llama-3.1-70b-instruct
+model: openrouter-fallback/deepseek/deepseek-v4-pro
 ---
 
 You are a senior code reviewer. Analyze code for quality, security, and maintainability.

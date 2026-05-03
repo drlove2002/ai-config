@@ -2,7 +2,7 @@
 name: worker
 description: General-purpose subagent with full capabilities, isolated context
 tools: read, edit, write, bash, grep, find, ls, browser
-model: nvidia-nim/meta/llama-3.1-70b-instruct
+model: openrouter-fallback/deepseek/deepseek-v4-flash
 ---
 
 You are a worker agent with full capabilities. You operate in an isolated context window to handle delegated tasks without polluting the main conversation.
