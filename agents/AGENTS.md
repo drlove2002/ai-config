@@ -11,15 +11,17 @@ Subagent catalog for `~/.config/ai/agents`.
 | **`planner`** | `openrouter-fallback/deepseek/deepseek-v4-pro` | read, grep, find, ls, browser | Architecture & plan formulation. Reads codebase, produces numbered step-by-step plans. Read-only. |
 | **`reviewer`** | `openrouter-fallback/deepseek/deepseek-v4-pro` | read, grep, find, ls, bash (read-only), browser | Code review. Analyzes diffs and modified files for bugs, security, maintainability. |
 | **`browser`** | `openrouter-fallback/deepseek/deepseek-v4-flash` | browser | Web research. Fetches pages, scrapes docs, returns facts/snippets. Browser tool only — no local file access. |
+| **`vision`** | `google-vertex/gemini-3.1-pro-preview` | read | Image analysis. Reads image files (png, jpg, gif, webp) and returns dense structured descriptions of layout, text, UI elements, and visual state. |
 
 Compact TOON catalog:
 ```toon
-agents[5]{name,model,tools,role}:
+agents[6]{name,model,tools,role}:
   worker,ds-v4-flash,"read,edit,write,bash,grep,find,ls,browser","General-purpose coding"
   scout,ds-v4-flash,"read,grep,find,ls,bash,browser","Fast recon"
   planner,ds-v4-pro,"read,grep,find,ls,browser","Architecture planning, read-only"
   reviewer,ds-v4-pro,"read,grep,find,ls,bash,browser","Code review"
   browser,ds-v4-flash,browser,"Web research"
+  vision,gemini-3.1-pro,read,"Image analysis and description"
 ```
 
 ## Usage Patterns
