@@ -13,8 +13,9 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { spawn, type ChildProcess } from "node:child_process";
 import { Readable } from "node:stream";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { homedir } from "node:os";
+import { fileURLToPath } from "node:url";
 
 const CONFIG_DIR = join(homedir(), ".config", "ai");
 const CONFIG_PATH = join(CONFIG_DIR, "pi-tts.json");
@@ -45,6 +46,8 @@ function saveConfig(config: TtsConfig) {
 const TTS_HOST = "127.0.0.1";
 const TTS_PORT = 18080;
 const VOICES = ["alba", "marius", "javert", "jean", "fantine", "cosette", "eponine", "azelma"];
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const TTS_BINARY = join(__dirname, "bin", "pocket-tts-cli");
 
 // Emotion → temperature/eos mapping for <voice emotion> tags
 const EMOTIONS: Record<string, { temp: number; eos?: number }> = {
@@ -75,6 +78,7 @@ export default function (pi: ExtensionAPI) {
   const ttsHost = initConfig.host ?? "127.0.0.1";
   const ttsPort = initConfig.port ?? 18080;
   let currentFfplay: ChildProcess | null = null;
+  let ttsServer: ChildProcess | null = null;
   let speakQueue: Promise<void> = Promise.resolve();
   let serverReady = false;
 
@@ -118,6 +122,56 @@ export default function (pi: ExtensionAPI) {
   function diagnose(): string {
     if (serverReady) return "Server running ✓";
     return lastDiagnosis || `Server not running`;
+  }
+
+  // ── Server lifecycle ──
+
+  async function startTtsServer(): Promise<boolean> {
+    if (serverReady) return true;
+    if (!existsSync(TTS_BINARY)) {
+      lastDiagnosis = `Binary not found: ${TTS_BINARY}`;
+      return false;
+    }
+
+    stopTtsServer();
+
+    ttsServer = spawn(TTS_BINARY, [
+      "serve",
+      "--port", String(ttsPort),
+      "--voice", currentVoice,
+    ], {
+      stdio: "ignore",
+      detached: false,
+    });
+
+    ttsServer.on("error", (err) => {
+      lastDiagnosis = `Server spawn failed: ${err.message}`;
+    });
+
+    ttsServer.on("exit", (code) => {
+      if (code !== 0 && code !== null) {
+        lastDiagnosis = `Server exited with code ${code}`;
+      }
+      ttsServer = null;
+      serverReady = false;
+    });
+
+    // Wait for server to come up (poll up to 5s)
+    for (let i = 0; i < 10; i++) {
+      await new Promise(r => setTimeout(r, 500));
+      if (await checkServer()) return true;
+    }
+
+    lastDiagnosis = `Server started but not reachable on ${ttsHost}:${ttsPort}`;
+    return false;
+  }
+
+  function stopTtsServer() {
+    if (ttsServer) {
+      ttsServer.kill();
+      ttsServer = null;
+    }
+    serverReady = false;
   }
 
   // ── Speech ──
@@ -367,10 +421,13 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("session_start", async (_event, ctx) => {
     await checkServer();
+    if (!serverReady) {
+      await startTtsServer();
+    }
     updateStatus(ctx);
     if (!serverReady) {
       ctx.ui.notify(
-        `🔇 TTS offline: ${diagnose()}\nStart: pocket-tts-cli serve --port ${ttsPort} --voice ${currentVoice}`,
+        `🔇 TTS offline: ${diagnose()}`,
         "warning"
       );
     }
@@ -402,6 +459,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("session_shutdown", async () => {
     stopSpeech();
+    stopTtsServer();
   });
 
   // ── Status bar helper ──
@@ -457,6 +515,12 @@ export default function (pi: ExtensionAPI) {
       if (voice === "auto" || VOICES.includes(voice)) {
         currentVoice = voice;
         saveConfig({ voice, host: ttsHost, port: ttsPort, enabled });
+        // Restart server with new voice
+        if (enabled) {
+          stopSpeech();
+          stopTtsServer();
+          await startTtsServer();
+        }
         ctx.ui.notify(`🎤 Voice: ${voice} (saved)`, "info");
       } else {
         ctx.ui.notify(`Unknown voice: ${voice}\nAvailable: ${VOICES.join(", ")}`, "warning");
