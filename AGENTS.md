@@ -22,7 +22,7 @@ When working, always respect instructions in this order:
 │   ├── scout.md            ← fast recon: read, grep, find, ls, bash, browser (model: gemini-3-flash)
 │   ├── planner.md          ← implementation plans: read, grep, find, ls, browser (model: openrouter-fallback/deepseek/deepseek-pro)
 │   ├── reviewer.md         ← code reviews: read, grep, find, ls, bash (read-only), browser
-│   └── browser.md          ← web research: browser, read, bash (model: gemini-3-flash)
+│   └── browser.md          ← web research: browser (model: google-vertex/gemini-3.1-pro-preview)
 ├── extensions/
 │   ├── clear-command.ts    ← /clear command (permanently delete session)
 │   ├── pi-rules.ts         ← search_ai_context tool + context directive
