@@ -8,6 +8,7 @@ Instructions for `~/.config/ai/memories`.
 - **`python-guidelines.md`** — Python coding standards: small functions, type hints, early returns, async patterns, context managers.
 - **`rust-guidelines.md`** — Rust coding standards: ownership clarity, modular files, domain types over bools, error context. Includes WWAPI-specific focus on state transitions and observability.
 - **`nextjs-guidelines.md`** — Next.js App Router standards: default to server components, thin client components, explicit caching, React Compiler patterns. Includes WWPAGE-specific focus (reactCompiler: true).
+- **`coding-architecture.md`** — Cross-language coding preferences: prefer types/structures/interfaces/classes, concise names, small cohesive files, low coupling.
 
 ## Purpose
 
