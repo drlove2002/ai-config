@@ -1,1 +1,22 @@
-/home/love/.pi/agent/settings.json
+{
+  "lastChangelogVersion": "0.71.0",
+  "defaultProvider": "commandcode",
+  "defaultModel": "deepseek/deepseek-v4-pro",
+  "packages": [
+    "/home/love/.pi/agent/packages/node_modules/pi-agent-browser"
+  ],
+  "defaultThinkingLevel": "medium",
+  "enabledModels": [
+    "google-vertex/gemini-3.1-pro-preview",
+    "google-vertex/gemini-3-flash-preview",
+    "cloudflare-ai/@cf/moonshotai/kimi-k2.6",
+    "commandcode/deepseek/deepseek-v4-pro",
+    "commandcode/deepseek/deepseek-v4-flash",
+    "openrouter/deepseek/deepseek-v4-pro",
+    "openrouter/deepseek/deepseek-v4-flash",
+    "openai-codex/gpt-5.4-mini",
+    "openai-codex/gpt-5.4",
+    "openai-codex/gpt-5.5",
+    "local-llama/supergemma4"
+  ]
+}

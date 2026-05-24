@@ -15,3 +15,8 @@ dist/
 # Temp files
 .tmp/
 cache/
+
+# Local/generated agent state
+auth.json
+.codex
+extensions/pi-tts/bin/
