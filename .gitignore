@@ -20,3 +20,4 @@ cache/
 auth.json
 .codex
 extensions/pi-tts/bin/
+.commandcode/
