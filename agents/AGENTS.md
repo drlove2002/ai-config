@@ -6,28 +6,28 @@ Subagent catalog for `~/.config/ai/agents`.
 
 | Agent | Model | Tools | Description |
 |-------|-------|-------|-------------|
-| **`worker`** | `openrouter-fallback/deepseek/deepseek-v4-flash` | read, edit, write, bash, grep, find, ls, browser | General-purpose. Autonomous coding: reads files, edits code, runs commands, browses web. |
-| **`scout`** | `openrouter-fallback/deepseek/deepseek-v4-flash` | read, grep, find, ls, bash, browser | Fast recon. Finds relevant files, returns compressed context for handoff. |
-| **`planner`** | `openrouter-fallback/deepseek/deepseek-v4-pro` | read, grep, find, ls, browser | Architecture & plan formulation. Reads codebase, produces numbered step-by-step plans. Read-only. |
-| **`reviewer`** | `openrouter-fallback/deepseek/deepseek-v4-pro` | read, grep, find, ls, bash (read-only), browser | Code review. Analyzes diffs and modified files for bugs, security, maintainability. |
-| **`browser`** | `google-vertex/gemini-3.1-pro-preview` | browser | Web research. Fetches pages, scrapes docs, and can inspect screenshots when page layout or visual state matters. |
+| **`worker`** | `openrouter/deepseek/deepseek-v4-flash` | read, edit, write, bash, grep, find, ls, browser | General-purpose. Executes approved coding plans: reads files, edits code, runs commands, browses web. |
+| **`scout`** | `openrouter/deepseek/deepseek-v4-flash` | read, grep, find, ls, bash, browser | Fast recon. Finds relevant files, returns compressed context for handoff.
+| **`planner`** | `openrouter/deepseek/deepseek-v4-pro` | read, grep, find, ls, browser | Architecture & plan formulation. Reads codebase, produces numbered step-by-step plans. Read-only. |
+| **`reviewer`** | `openrouter/deepseek/deepseek-v4-pro` | read, grep, find, ls, bash (read-only), browser | Code review. Analyzes diffs and modified files for bugs, security, maintainability. |
+| **`browser`** | `openrouter/deepseek/deepseek-v4-flash` | browser | Web research. Fetches pages, scrapes docs, and can inspect screenshots when page layout or visual state matters. |
 | **`vision`** | `google-vertex/gemini-3.1-pro-preview` | read | Image analysis. Reads image files (png, jpg, gif, webp) and returns dense structured descriptions of layout, text, UI elements, and visual state. |
 
 Compact TOON catalog:
 ```toon
 agents[6]{name,model,tools,role}:
-  worker,ds-v4-flash,"read,edit,write,bash,grep,find,ls,browser","General-purpose coding"
-  scout,ds-v4-flash,"read,grep,find,ls,bash,browser","Fast recon"
-  planner,ds-v4-pro,"read,grep,find,ls,browser","Architecture planning, read-only"
-  reviewer,ds-v4-pro,"read,grep,find,ls,bash,browser","Code review"
-  browser,gemini-3.1-pro-preview,browser,"Web research and screenshot inspection"
+  worker,openrouter/deepseek/deepseek-v4-flash,"read,edit,write,bash,grep,find,ls,browser","Execute approved coding plans"
+  scout,openrouter/deepseek/deepseek-v4-flash,"read,grep,find,ls,bash,browser","Fast recon"
+  planner,openrouter/deepseek/deepseek-v4-pro,"read,grep,find,ls,browser","Architecture planning, read-only"
+  reviewer,openrouter/deepseek/deepseek-v4-pro,"read,grep,find,ls,bash,browser","Code review"
+  browser,openrouter/deepseek/deepseek-v4-flash,browser,"Web research and screenshot inspection"
   vision,gemini-3.1-pro,read,"Image analysis and description"
 ```
 
 ## Usage Patterns
 
-- **Chain**: `scout` → `planner` → `worker` (implement feature from scratch)
-- **Chain**: `worker` → `reviewer` → `worker` (implement then fix)
+- **Chain**: `scout` → `planner` → user approval → `worker` (implement feature from scratch)
+- **Chain**: `worker` → `reviewer` → user approval if changes expand scope → `worker` (implement then fix)
 - **Parallel**: Multiple `scout`s for separate areas of codebase
 - **Single**: `browser` for docs lookups, `scout` for quick recon
 
