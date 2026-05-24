@@ -1,24 +1,25 @@
 ---
 name: autonomous-refactor-loop
-description: Autonomous inspect-simplify-test loop for existing codebases. Use when the user wants to optimize, simplify, refactor, improve readability, reduce duplication, or asks for an autonomous prompt that keeps inspecting code, making the highest-value cleanup, testing it, and repeating until further simplification is low value.
+description: Inspect-simplify-test loop for existing codebases after user plan approval. Use when the user wants to optimize, simplify, refactor, improve readability, reduce duplication, or asks for a loop that inspects code, proposes the highest-value cleanup, waits for approval, tests it, and repeats until further simplification is low value.
 ---
 
-# Autonomous Refactor Loop
+# Approved Refactor Loop
 
 ## Workflow
 
 1. Inspect the relevant code first.
 2. Identify the highest-value simplification or cleanup.
-3. If the architecture or naming is unclear, resolve that before editing.
-4. If the task is broad, break it into the smallest safe step that still improves the code.
-5. If behavior changes are needed, use TDD:
+3. Present the smallest safe plan to the user before editing.
+4. Wait for user approval.
+5. If the architecture or naming is unclear, resolve that before editing.
+6. If behavior changes are needed, use TDD after approval:
    - write one failing test
    - make the smallest change that passes
    - rerun the relevant tests
-6. Prefer fewer concepts, fewer branches, smaller functions, and clearer names.
-7. Remove duplication only when the replacement is simpler than the original.
-8. Keep changes local and avoid speculative abstractions.
-9. Repeat the inspect-simplify-test loop until further simplification would be low value or risky.
+7. Prefer fewer concepts, fewer branches, smaller functions, and clearer names.
+8. Remove duplication only when the replacement is simpler than the original.
+9. Keep changes local and avoid speculative abstractions.
+10. After each loop, report results and propose the next cleanup. Wait for approval before the next edit.
 
 ## Decision Rules
 

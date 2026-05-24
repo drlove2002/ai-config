@@ -1,4 +1,4 @@
 interface:
-  display_name: "Autonomous Refactor Loop"
+  display_name: "Approved Refactor Loop"
   short_description: "Inspect, simplify, test, repeat"
-  default_prompt: "Use $autonomous-refactor-loop to inspect the codebase, simplify the highest-value area, test behavior with TDD when needed, and repeat until further simplification is low value."
+  default_prompt: "Use $autonomous-refactor-loop to inspect the codebase, propose the highest-value simplification, wait for user approval, test behavior with TDD when needed, and repeat only after each approved step."

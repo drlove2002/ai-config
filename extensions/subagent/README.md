@@ -154,9 +154,9 @@ Project agents override user agents with the same name when `agentScope: "both"`
 
 | Prompt | Flow |
 |--------|------|
-| `/implement <query>` | scout → planner → worker |
+| `/implement <query>` | scout → planner → user approval → worker |
 | `/scout-and-plan <query>` | scout → planner |
-| `/implement-and-review <query>` | worker → reviewer → worker |
+| `/implement-and-review <query>` | approved worker plan → worker → reviewer → user approval if scope expands → worker |
 
 ## Error Handling
 
