@@ -146,14 +146,13 @@ async function checkServer(): Promise<boolean> {
 }
 
 async function speakSegment(seg: Segment): Promise<void> {
-  const body: Record<string, unknown> = { text: seg.text, voice: "alba" };
-  if (seg.temperature != null) body.temperature = seg.temperature;
-  if (seg.eosThreshold != null) body.eos_threshold = seg.eosThreshold;
+  const form = new FormData();
+  form.set("text", seg.text);
+  form.set("voice_url", "alba");
 
-  const resp = await fetch(`http://${TTS_HOST}:${TTS_PORT}/stream`, {
+  const resp = await fetch(`http://${TTS_HOST}:${TTS_PORT}/tts`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: form,
   });
 
   if (!resp.ok || !resp.body) {
@@ -162,8 +161,10 @@ async function speakSegment(seg: Segment): Promise<void> {
   }
 
   const ffplay = spawn("ffplay", [
-    "-f", "s16le", "-ar", "24000", "-nodisp",
-    "-loglevel", "quiet", "-autoexit", "-",
+    "-nodisp",
+    "-loglevel", "quiet",
+    "-autoexit",
+    "-",
   ]);
 
   await new Promise<void>((resolve) => {
@@ -171,6 +172,7 @@ async function speakSegment(seg: Segment): Promise<void> {
     ffplay.on("exit", resolve);
     const nodeStream = Readable.fromWeb(resp.body as any);
     nodeStream.pipe(ffplay.stdin!);
+    ffplay.stdin?.on("error", () => { ffplay.kill(); resolve(); });
     nodeStream.on("error", () => { ffplay.kill(); resolve(); });
   });
 }
@@ -178,7 +180,7 @@ async function speakSegment(seg: Segment): Promise<void> {
 async function main() {
   const ok = await checkServer();
   if (!ok) {
-    console.error("pocket-tts-cli not running on port 18080");
+    console.error("pocket-tts not running on port 18080");
     process.exit(1);
   }
 

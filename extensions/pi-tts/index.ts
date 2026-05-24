@@ -2,11 +2,11 @@
  * pi-tts — Local text-to-speech extension for Pi
  *
  * Speaks <voice> tagged content from assistant responses using
- * pocket-tts-cli for synthesis and ffplay for audio output.
+ * pocket-tts for synthesis and ffplay for audio output.
  *
- * Requires pocket-tts-cli running on localhost:18080.
- * Build: nix build
- * Start: ./result/bin/pocket-tts-cli serve --port 18080 --voice alba
+ * Requires pocket-tts running on localhost:18080.
+ * Setup: ./setup.sh
+ * Start: ./bin/pocket-tts-cli serve --host 127.0.0.1 --port 18080
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -137,8 +137,8 @@ export default function (pi: ExtensionAPI) {
 
     ttsServer = spawn(TTS_BINARY, [
       "serve",
+      "--host", ttsHost,
       "--port", String(ttsPort),
-      "--voice", currentVoice,
     ], {
       stdio: "ignore",
       detached: false,
@@ -187,21 +187,20 @@ export default function (pi: ExtensionAPI) {
 
   async function speakOne(text: string, temperature?: number, eosThreshold?: number) {
     try {
-      const body: Record<string, unknown> = { text, voice: currentVoice };
-      if (temperature != null) body.temperature = temperature;
-      if (eosThreshold != null) body.eos_threshold = eosThreshold;
+      const form = new FormData();
+      form.set("text", text);
+      if (currentVoice !== "auto") {
+        form.set("voice_url", currentVoice);
+      }
 
-      const resp = await fetch(`http://${ttsHost}:${ttsPort}/stream`, {
+      const resp = await fetch(`http://${ttsHost}:${ttsPort}/tts`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: form,
       });
 
       if (!resp.ok || !resp.body) return;
 
       const ffplay = spawn("ffplay", [
-        "-f", "s16le",
-        "-ar", "24000",
         "-nodisp",
         "-loglevel", "quiet",
         "-autoexit",
@@ -216,6 +215,10 @@ export default function (pi: ExtensionAPI) {
 
         const nodeStream = Readable.fromWeb(resp.body as any);
         nodeStream.pipe(ffplay.stdin!);
+        ffplay.stdin?.on("error", () => {
+          ffplay.kill();
+          resolve();
+        });
         nodeStream.on("error", () => {
           ffplay.kill();
           resolve();
@@ -548,7 +551,7 @@ export default function (pi: ExtensionAPI) {
         `Endpoint: ${ttsHost}:${ttsPort}`,
       ];
       if (!serverReady) {
-        lines.push(`Start: pocket-tts-cli serve --port ${ttsPort} --voice ${currentVoice}`);
+        lines.push(`Start: pocket-tts-cli serve --host ${ttsHost} --port ${ttsPort}`);
       }
       ctx.ui.notify(lines.join("\n"), serverReady ? "info" : "warning");
       updateStatus(ctx);
