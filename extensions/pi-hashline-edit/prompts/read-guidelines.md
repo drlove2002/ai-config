@@ -1,0 +1,6 @@
+- Read before edit when you lack current LINE#HASH anchors.
+- If read is truncated, use `offset` to continue — don't guess unseen lines.
+- Max 3 edits per call. Batch larger changes across calls, re-reading between batches.
+- On E_STALE_ANCHOR: use the `>>> LINE#HASH:` lines from the error — no re-read needed.
+- On E_NO_MATCH / E_MULTI_MATCH: re-read the file before retrying.
+- After edit success, the Anchors block covers the changed region only. Distant edits need a fresh read.
