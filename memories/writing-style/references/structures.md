@@ -122,7 +122,7 @@ Wh- openers become a crutch. "What makes this hard is..." becomes "The constrain
 | Three-item lists | Use two items or one |
 | Questions answered immediately | Let questions breathe or cut them |
 | Every paragraph ends punchily | Vary endings |
-| Em-dashes | Remove. Use commas or periods. No em dashes at all. |
+| Em-dashes | Remove. Use commas or periods. Hyphens in compound words ("Co-Op") are not em dashes and are fine. |
 | Staccato fragmentation | Don't stack short punchy sentences |
 | "Not always. Not perfectly." | Hedging disguised as reassurance |
 

@@ -1,0 +1,23 @@
+{
+  "nextcord": {
+    "path": "~/.config/ai/docs/nextcord",
+    "source": "https://github.com/nextcord/nextcord",
+    "subdir": "docs",
+    "type": "api",
+    "format": "rst"
+  },
+  "discord.py": {
+    "path": "~/.config/ai/docs/discord.py",
+    "source": "https://github.com/Rapptz/discord.py",
+    "subdir": "docs",
+    "type": "api",
+    "format": "rst"
+  },
+  "next.js": {
+    "path": "/data/Projects/worldwide/wwpage/node_modules/next/dist/docs",
+    "source": "npm:next",
+    "type": "api",
+    "format": "md",
+    "note": "Available when wwpage node_modules exist"
+  }
+}

@@ -1,0 +1,1 @@
+/data/Projects/worldwide/wwpage/node_modules/next/dist/docs

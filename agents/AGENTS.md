@@ -6,23 +6,12 @@ Subagent catalog for `~/.config/ai/agents`.
 
 | Agent | Model | Tools | Description |
 |-------|-------|-------|-------------|
-| **`worker`** | `openrouter/deepseek/deepseek-v4-flash` | read, edit, write, bash, grep, find, ls, browser | General-purpose. Executes approved coding plans: reads files, edits code, runs commands, browses web. |
-| **`scout`** | `openrouter/deepseek/deepseek-v4-flash` | read, grep, find, ls, bash, browser | Fast recon. Finds relevant files, returns compressed context for handoff.
-| **`planner`** | `openrouter/deepseek/deepseek-v4-pro` | read, grep, find, ls, browser | Architecture & plan formulation. Reads codebase, produces numbered step-by-step plans. Read-only. |
-| **`reviewer`** | `openrouter/deepseek/deepseek-v4-pro` | read, grep, find, ls, bash (read-only), browser | Code review. Analyzes diffs and modified files for bugs, security, maintainability. |
-| **`browser`** | `openrouter/deepseek/deepseek-v4-flash` | browser | Web research. Fetches pages, scrapes docs, and can inspect screenshots when page layout or visual state matters. |
+| **`worker`** | `commandcode/deepseek/deepseek-v4-flash` | read, edit, write, bash, grep, find, ls, browser | General-purpose. Executes approved coding plans: reads files, edits code, runs commands, browses web. |
+| **`scout`** | `commandcode/deepseek/deepseek-v4-flash` | read, grep, find, ls, bash, browser | Fast recon. Finds relevant files, returns compressed context for handoff.
+| **`planner`** | `commandcode/deepseek/deepseek-v4-pro` | read, grep, find, ls, browser | Architecture & plan formulation. Reads codebase, produces numbered step-by-step plans. Read-only. |
+| **`reviewer`** | `commandcode/deepseek/deepseek-v4-pro` | read, grep, find, ls, bash (read-only), browser | Code review. Analyzes diffs and modified files for bugs, security, maintainability. |
+| **`browser`** | `commandcode/deepseek/deepseek-v4-flash` | browser | Web research. Fetches pages, scrapes docs, and can inspect screenshots when page layout or visual state matters. |
 | **`vision`** | `google-vertex/gemini-3.1-pro-preview` | read | Image analysis. Reads image files (png, jpg, gif, webp) and returns dense structured descriptions of layout, text, UI elements, and visual state. |
-
-Compact TOON catalog:
-```toon
-agents[6]{name,model,tools,role}:
-  worker,openrouter/deepseek/deepseek-v4-flash,"read,edit,write,bash,grep,find,ls,browser","Execute approved coding plans"
-  scout,openrouter/deepseek/deepseek-v4-flash,"read,grep,find,ls,bash,browser","Fast recon"
-  planner,openrouter/deepseek/deepseek-v4-pro,"read,grep,find,ls,browser","Architecture planning, read-only"
-  reviewer,openrouter/deepseek/deepseek-v4-pro,"read,grep,find,ls,bash,browser","Code review"
-  browser,openrouter/deepseek/deepseek-v4-flash,browser,"Web research and screenshot inspection"
-  vision,gemini-3.1-pro,read,"Image analysis and description"
-```
 
 ## Usage Patterns
 

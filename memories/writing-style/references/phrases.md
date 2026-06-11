@@ -115,6 +115,28 @@ Announcing difficulty or significance rather than demonstrating it:
 - "This is what X actually looks like"
 - "actually matters"
 
+## E-Prime ("To Be" Forms)
+
+Avoid all static forms of "to be" — is, was, were, are, am, been, being, be. Replace identity statements ("X is Y") with action verbs. Every sentence should have an actor doing something, not a thing being something.
+
+**Static forms to replace:**
+
+| Avoid | Replace with |
+|-------|-------------|
+| "The problem is complexity" | "Complexity derails the project" |
+| "This is a mistake" | "You made a mistake here" |
+| "It was broken" | "The deploy broke it" |
+| "These are important" | "These matter" |
+| "She is the lead" | "She leads the team" |
+| "There are three issues" | "Three issues block progress" |
+
+**Allowed exceptions:**
+
+- Continuous verb forms: "she is running," "they were building"
+- Compound words: "Co-Op," "Re-Elect"
+- Dialogue or direct quotes (don't rewrite someone's spoken words)
+- Definitions where identity is the point: "A monad is a monoid in the category of endofunctors"
+
 ## Vague Declaratives
 
 Sentences that announce importance without naming the specific thing. Kill these.

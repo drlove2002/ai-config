@@ -30,9 +30,9 @@
 > "In today's fast-paced landscape, we need to lean into discomfort and navigate uncertainty with clarity. This matters because your competition isn't waiting."
 
 **After:**
-> "Move faster. Your competition is."
+> "Move faster than your competition."
 
-**Changes:** Eliminated jargon entirely. Core message in six words.
+**Changes:** Eliminated jargon, removed emphasis crutch, stated the point directly.
 
 ---
 
@@ -42,7 +42,7 @@
 > "Speed. Quality. Cost. You can only pick two. That's it. That's the tradeoff."
 
 **After:**
-> "Speed, quality, cost—pick two."
+> "Speed, quality, cost: pick two."
 
 **Changes:** Single sentence. No performative emphasis.
 

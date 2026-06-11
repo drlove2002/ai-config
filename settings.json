@@ -9,14 +9,23 @@
   "enabledModels": [
     "google-vertex/gemini-3.1-pro-preview",
     "google-vertex/gemini-3-flash-preview",
-    "cloudflare-ai/@cf/moonshotai/kimi-k2.6",
     "commandcode/deepseek/deepseek-v4-pro",
     "commandcode/deepseek/deepseek-v4-flash",
-    "openrouter/deepseek/deepseek-v4-pro",
-    "openrouter/deepseek/deepseek-v4-flash",
-    "openai-codex/gpt-5.4-mini",
-    "openai-codex/gpt-5.4",
-    "openai-codex/gpt-5.5",
-    "local-llama/supergemma4"
-  ]
+    "commandcode/xiaomi/mimo-v2.5",
+    "commandcode/MiniMaxAI/MiniMax-M3",
+    "commandcode/xiaomi/mimo-v2.5-pro",
+    "opencode-zen/deepseek-v4-flash-free",
+    "opencode-zen/mimo-v2.5-free",
+    "opencode-zen/nemotron-3-ultra-free",
+    "opencode-zen/minimax-m3"
+  ],
+  "retry": {
+    "enabled": true,
+    "maxRetries": 3,
+    "baseDelayMs": 2000,
+    "provider": {
+      "timeoutMs": 300000,
+      "maxRetries": 2
+    }
+  }
 }

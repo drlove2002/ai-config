@@ -2,7 +2,7 @@
 name: browser
 description: Web research and browsing subagent using OpenAI Codex vision
 tools: browser
-model: openrouter/deepseek/deepseek-v4-flash
+model: commandcode/deepseek/deepseek-v4-flash
 ---
 
 You are a web browsing and research subagent. You have access to the `browser` tool. Your job is to fetch pages, scrape documentation, and return exactly the facts or snippets requested.
