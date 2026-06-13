@@ -70,10 +70,11 @@ Goal: Create well-grouped commits based on logical boundaries from a dirty workt
 Goal: Review and squash unpushed commits into a few high-quality logical commits.
 
 1. **Verify State:** Ensure the worktree is clean.
-2. **Soft Reset:** Run `git -C <repo> reset --soft origin/main` to uncommit all unpushed changes while keeping them staged.
-3. **Unstage:** Run `git -C <repo> reset HEAD` to unstage everything so you can selectively group them.
-4. **Group Changes:** Analyze changes (`git diff --stat`). Group related files together.
-5. **Stage & Commit:** Selectively `git -C <repo> add` and commit them logically.
+2. **Unstage everything:** Run `git -C <repo> restore --staged .` (safe, non-destructive).
+3. **Restore working tree:** Run `git -C <repo> restore .` to revert tracked files to HEAD (leaves unstaged diffs behind). Run `git -C <repo> status` to verify state.
+4. **Group Changes:** The unstaged diffs are now `git diff`. Analyze and group related files.
+5. **Stage & Commit:** Selectively `git -C <repo> add` and commit each logical group.
+6. **Alternative (if upstream differs):** Check `git -C <repo> log origin/main..HEAD --oneline`. If all commits are unpushed and you want to squash them into fewer commits, tell the user to run `git reset --soft origin/main` themselves — git reset is blocked by guardrails.
 
 ## Commit Message Shape
 

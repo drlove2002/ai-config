@@ -4,7 +4,9 @@ The `_pi/*` branches are pi's undo system. Every agent turn auto-commits there. 
 
 ## Never
 
-- `git reset --hard` — destroys uncommitted work; use `git reset --soft` or `git restore`
+- `git reset --hard` — destroys uncommitted work
+- `git reset --soft` — rewrites history; equally destructive
+- `git reset` — any form, on any repo, without explicit user approval
 - `git branch -D` or `git branch -d` any `_pi/*` branch
 - `git push` any `_pi/*` branch
 

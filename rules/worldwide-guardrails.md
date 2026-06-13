@@ -96,12 +96,12 @@ After proto changes:
 | # | Pattern | Count | Prevented by rule |
 |---|---------|-------|-------------------|
 | FM1 | Git history not checked before changes | 49 sessions with pattern | Rule 1 |
-| FM2 | Unsafe assumptions (wrong error codes, naming, semantics) | 131 sessions with pattern | Rules 5, 6 |
+| FM2 | Unsafe assumptions (wrong error codes, naming, semantics) | 138 sessions with pattern | Rules 5, 6 |
 | FM3 | Agent stops mid-flow on multi-file work | 4 sessions with pattern | Rule 7 (delegate to worker) |
-| FM4 | Over-engineering (should be simpler) | 46 sessions with pattern | Rules 6, 7 |
+| FM4 | Over-engineering (should be simpler) | 49 sessions with pattern | Rules 6, 7 |
 | FM5 | Git commands at workspace root (not a repo) | 20 sessions with pattern | Rule 4 |
 | FM6 | AGENTS.md not read before acting | 44 sessions with pattern | Rule 2 |
-| FM7 | Edit tool failures (stale anchors, no pre-read) | 24 sessions with pattern | Read before edit |
+| FM7 | Edit tool failures (stale anchors, no pre-read) | 29 sessions with pattern | Read before edit |
 | FM8 | Circular thinking / open-thinking paralysis | 4 sessions with pattern | No Circular Thinking (orchestrator.md) |
 <!-- AUTO:FAILURE_MODES_END -->
 
@@ -134,6 +134,6 @@ After proto changes:
 
 This file's auto-generated sections (Failure Modes, this metadata block) are refreshed daily by `update-guardrails.py` triggered via systemd timer. The HARD RULES and Integration Hotspots sections are hand-curated and never overwritten.
 
-**Last analysis**: 2026-06-11 (226 sessions, incremental)
+**Last analysis**: 2026-06-13 (240 sessions, incremental)
 **Run**: `~/.config/ai/scripts/update-guardrails.py`
 <!-- AUTO:EVOLUTION_META_END -->

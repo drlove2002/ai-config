@@ -1,14 +1,14 @@
 {
-  "last_processed_date": "2026-06-09T00:00:00+00:00",
+  "last_processed_date": "2026-06-11T00:00:00+00:00",
   "failure_counts": {
-    "FM2_unsafe_assumptions": 131,
-    "FM4_over_engineering": 46,
+    "FM2_unsafe_assumptions": 138,
+    "FM4_over_engineering": 49,
     "FM6_agents_md": 44,
     "FM1_git_history": 49,
     "FM3_mid_flow": 4,
-    "FM7_edit_failure": 24,
+    "FM7_edit_failure": 29,
     "FM8_circular_thinking": 4,
     "FM5_wrong_root": 20
   },
-  "total_sessions": 226
+  "total_sessions": 240
 }
