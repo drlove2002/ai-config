@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "0.71.0",
+  "lastChangelogVersion": "0.79.1",
   "defaultProvider": "commandcode",
   "defaultModel": "deepseek/deepseek-v4-pro",
   "packages": [
@@ -7,17 +7,13 @@
   ],
   "defaultThinkingLevel": "medium",
   "enabledModels": [
-    "google-vertex/gemini-3.1-pro-preview",
-    "google-vertex/gemini-3-flash-preview",
     "commandcode/deepseek/deepseek-v4-pro",
-    "commandcode/deepseek/deepseek-v4-flash",
-    "commandcode/xiaomi/mimo-v2.5",
     "commandcode/MiniMaxAI/MiniMax-M3",
     "commandcode/xiaomi/mimo-v2.5-pro",
     "opencode-zen/deepseek-v4-flash-free",
     "opencode-zen/mimo-v2.5-free",
     "opencode-zen/nemotron-3-ultra-free",
-    "opencode-zen/minimax-m3"
+    "commandcode/zai-org/GLM-5.2"
   ],
   "retry": {
     "enabled": true,

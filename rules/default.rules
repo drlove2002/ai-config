@@ -1,7 +1,6 @@
 prefix_rule(pattern=["mkdir", "-p", "/home/love/.config/ai/skills/find-docs", "/home/love/.config/ai/skills/smart-commit"], decision="allow")
 prefix_rule(pattern=["cp", "/tmp/ai-skill-import/README.md", "/home/love/.config/ai/skills/README.md"], decision="allow")
 prefix_rule(pattern=["mkdir", "-p", "/home/love/.config/ai/profile"], decision="allow")
-prefix_rule(pattern=["git", "-C", "/data/Projects/drlove_portfolio", "push"], decision="allow")
 prefix_rule(pattern=["xdg-open"], decision="allow")
 prefix_rule(pattern=["pnpm", "build"], decision="allow")
 prefix_rule(pattern=["pnpm", "dev"], decision="allow")
@@ -28,3 +27,5 @@ prefix_rule(pattern=["/run/current-system/sw/bin/bash", "-lc", "DATABASE_URL=pos
 prefix_rule(pattern=["uv", "run"], decision="allow")
 prefix_rule(pattern=["ps"], decision="allow")
 prefix_rule(pattern=["qs"], decision="allow")
+prefix_rule(pattern=["git", "push"], decision="deny")
+prefix_rule(pattern=["git", "-C"], has_subsequence=["push"], decision="deny")

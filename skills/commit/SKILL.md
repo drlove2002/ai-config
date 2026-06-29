@@ -47,7 +47,7 @@ done
 
 With the target repo determined, look at its git state:
 - `git -C <repo> status`
-- `git -C <repo> log origin/main..HEAD --oneline` (or whatever the upstream branch is).
+- `git -C <repo> log origin/main..HEAD --oneline` (to see unpushed commits — for reference only, never push)
 
 If the user has **unstaged/dirty changes**, use **Smart Commit Mode**.
 If the user has a clean worktree but **many unpushed small commits**, use **Squash Mode**.
@@ -70,11 +70,9 @@ Goal: Create well-grouped commits based on logical boundaries from a dirty workt
 Goal: Review and squash unpushed commits into a few high-quality logical commits.
 
 1. **Verify State:** Ensure the worktree is clean.
-2. **Unstage everything:** Run `git -C <repo> restore --staged .` (safe, non-destructive).
-3. **Restore working tree:** Run `git -C <repo> restore .` to revert tracked files to HEAD (leaves unstaged diffs behind). Run `git -C <repo> status` to verify state.
-4. **Group Changes:** The unstaged diffs are now `git diff`. Analyze and group related files.
-5. **Stage & Commit:** Selectively `git -C <repo> add` and commit each logical group.
-6. **Alternative (if upstream differs):** Check `git -C <repo> log origin/main..HEAD --oneline`. If all commits are unpushed and you want to squash them into fewer commits, tell the user to run `git reset --soft origin/main` themselves — git reset is blocked by guardrails.
+2. **Identify unpushed commits:** `git -C <repo> log origin/main..HEAD --oneline` to see what's unreachable from upstream.
+3. **Propose plan:** Tell the user which commits you'd squash into which groups, and ask if they want to proceed with `git reset --soft origin/main` (which they run, not you — git reset is blocked by guardrails).
+4. **Wait for user to reset**, then proceed to stage and commit logical groups.
 
 ## Commit Message Shape
 
@@ -92,8 +90,9 @@ Valid types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `style`.
 ## Guardrails
 - **NEVER** use `git add -A` or `git add .` — always add specific files.
 - **NEVER** mix unrelated changes in the same commit.
+- **NEVER push.** Not remotely, not interactively, not as part of any workflow. Commits are local only. If the user wants to push, they do it themselves.
 - Read the diffs (`git diff`) before deciding grouping.
 - Ensure the original intent of squashed commits is preserved in the new message bodies.
 
 ## Output
-After committing, output a summary of the new commits created and what each one contains.
+After committing, output a summary of the new commits created and what each one contains. Do not ask about pushing or offer to push.

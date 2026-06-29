@@ -1,154 +1,115 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { truncateHead, DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES } from "@mariozechner/pi-coding-agent";
-import { Type } from "typebox";
-import { homedir } from "node:os";
-import { resolve } from "node:path";
-
 /**
- * Context loader — runs once per session and preloads everything:
- *  1. Recursive AGENTS.md from the project tree (downward from cwd)
- *  2. All .md guidelines from ~/.config/ai/rules/
- *  3. All .md guidelines from ~/.config/ai/memories/
+ * Context & System Prompt Manager
  *
- * Also registers the search_ai_context tool for on-demand lookups.
+ * Responsibilities:
+ *  1. Auto-inject AGENTS.md (recursive from cwd), rules/*.md, memories/*.md
+ *     into system prompt at session start
+ *  2. Inject lean system prompt (identity + routing + hard locks) on every turn
+ *  3. Display context-loader widget with file counts
  */
+
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { homedir } from "node:os";
+import { resolve, relative } from "node:path";
+import { readdirSync, readFileSync, existsSync } from "node:fs";
 
 const AI_DIR = resolve(homedir(), ".config/ai");
 
-let projectAgentsContent = "";
-let globalContextContent = "";
+// ── Cached context (loaded once at session start) ────────────────
+let cachedContext = "";
+let rulesCount = 0;
+let memCount = 0;
+
+// ── Directories to skip when scanning for AGENTS.md ──────────────
+const SKIP_DIRS = new Set([
+  "node_modules", ".git", "target", ".venv",
+  "__pycache__", ".next", "dist", "build",
+  ".pi", ".agents",
+]);
 
 export default function (pi: ExtensionAPI) {
-  // ── Discover and cache all context at session start ──────────────────
+  // ── 1. Discover + cache all context at session start ──────────────
   pi.on("session_start", async (_event, ctx) => {
-    projectAgentsContent = "";
-    globalContextContent = "";
-    const loaded: string[] = [];
+    cachedContext = "";
+    rulesCount = 0;
+    memCount = 0;
+    const parts: string[] = [];
 
-    // ── 1. Recursive AGENTS.md from project tree ───────────────────────
-    const findResult = await pi.exec("find", [
-      ".",
-      "-name", "AGENTS.md",
-      "-not", "-path", "*/node_modules/*",
-      "-not", "-path", "*/.git/*",
-      "-not", "-path", "*/target/*",
-      "-not", "-path", "*/.venv/*",
-      "-not", "-path", "*/__pycache__/*",
-      "-not", "-path", "*/.next/*",
-      "-not", "-path", "*/dist/*",
-      "-not", "-path", "*/build/*",
-      "-type", "f",
-    ], {});
+    // ── 1a. Recursive AGENTS.md from cwd subdirectories ───────────
+    // (pi already loads AGENTS.md walking up from cwd + current dir)
+    const agentsMdFiles = findRecursiveAgentsMd(ctx.cwd);
+    if (agentsMdFiles.length > 0) {
+      const sections: string[] = [
+        "\n## Project Subdirectory AGENTS.md",
+      ];
+      for (const p of agentsMdFiles) {
+        const rel = relative(ctx.cwd, p);
+        // Skip cwd-level file (pi already loads it)
+        if (!rel.includes("/")) continue;
+        sections.push(`\n### ${rel}\n`);
+        sections.push(readFileSync(p, "utf-8").trim());
+      }
+      if (sections.length > 1) { // more than just the header
+        parts.push(sections.join("\n"));
+      }
+    }
 
-    if (findResult.code === 0 && findResult.stdout.trim()) {
-      const allPaths = findResult.stdout.trim().split("\n").filter(Boolean);
-      // pi already loads AGENTS.md walking up from cwd and ~/.pi/agent/AGENTS.md.
-      const filtered = allPaths.filter(
-        (p) => !p.startsWith("./.pi/") && p !== "./AGENTS.md",
-      );
+    // ── 1b. All .md from ~/.config/ai/rules/ ────────────────────────
+    const rulesDir = resolve(AI_DIR, "rules");
+    if (existsSync(rulesDir)) {
+      const ruleFiles = readdirSync(rulesDir)
+        .filter(f => f.endsWith(".md"))
+        .sort()
+        .map(f => resolve(rulesDir, f));
 
-      if (filtered.length > 0) {
-        const parts: string[] = [
-          "\n\n## Recursive AGENTS.md Context",
-          "The following AGENTS.md files were discovered recursively in the project tree:\n",
+      if (ruleFiles.length > 0) {
+        const sections: string[] = [
+          "\n## Global Rules",
         ];
-        for (const p of filtered) {
-          const cat = await pi.exec("cat", [p], {});
-          if (cat.code === 0 && cat.stdout.trim()) {
-            parts.push(`\n### ${p}\n`);
-            parts.push(cat.stdout.trim());
-            loaded.push(p);
-          }
+        for (const f of ruleFiles) {
+          const name = relative(AI_DIR, f);
+          sections.push(`\n### ${name}\n`);
+          sections.push(readFileSync(f, "utf-8").trim());
         }
-        projectAgentsContent = parts.join("\n");
+        parts.push(sections.join("\n"));
+        rulesCount = ruleFiles.length;
       }
     }
 
-    // ── 2. All guidelines from ~/.config/ai/ ───────────────────────────
-    const aiFind = await pi.exec("find", [
-      AI_DIR,
-      "-name", "*.md",
-      "-type", "f",
-    ], {});
-
-    if (aiFind.code === 0 && aiFind.stdout.trim()) {
-      const aiFiles = aiFind.stdout.trim().split("\n").filter(Boolean).sort();
-
-      const rulesFiles: string[] = [];
-      const memoriesFiles: string[] = [];
-
-      for (const f of aiFiles) {
-        if (f.startsWith(AI_DIR + "/rules/")) rulesFiles.push(f);
-        else if (f.startsWith(AI_DIR + "/memories/")) memoriesFiles.push(f);
-      }
-
-      const parts: string[] = [];
-
-      if (rulesFiles.length > 0) {
-        parts.push(
-          "\n\n## Global AI Rules",
-          "Durable operational rules loaded from ~/.config/ai/rules/:\n",
-        );
-        for (const f of rulesFiles) {
-          const cat = await pi.exec("cat", [f], {});
-          if (cat.code === 0 && cat.stdout.trim()) {
-            parts.push(`\n### ${f}\n`);
-            parts.push(cat.stdout.trim());
-            loaded.push(f);
-          }
+    // ── 1c. All .md from ~/.config/ai/memories/ (recursive) ─────────
+    const memDir = resolve(AI_DIR, "memories");
+    if (existsSync(memDir)) {
+      const memFiles = findMdFilesRecursive(memDir).sort();
+      if (memFiles.length > 0) {
+        const sections: string[] = [
+          "\n## Global Memories",
+        ];
+        for (const f of memFiles) {
+          const name = relative(AI_DIR, f);
+          const content = readFileSync(f, "utf-8").trim();
+          // Skip empty files and AGENTS.md index (just a listing)
+          if (!content || name === "memories/AGENTS.md") continue;
+          sections.push(`\n### ${name}\n`);
+          sections.push(content);
         }
+        parts.push(sections.join("\n"));
+        memCount = memFiles.length;
       }
-
-      if (memoriesFiles.length > 0) {
-        parts.push(
-          "\n\n## Global AI Memories",
-          "Durable tech preferences and project guidelines from ~/.config/ai/memories/:\n",
-        );
-        for (const f of memoriesFiles) {
-          const cat = await pi.exec("cat", [f], {});
-          if (cat.code === 0 && cat.stdout.trim()) {
-            parts.push(`\n### ${f}\n`);
-            parts.push(cat.stdout.trim());
-            loaded.push(f);
-          }
-        }
-      }
-
-      globalContextContent = parts.join("\n");
     }
 
-    // ── Persistent widget above editor ─────────────────────────────
-    if (loaded.length > 0 && ctx.hasUI) {
-      // Group by source for compact display
-      const projectFiles = loaded.filter((f) => f.startsWith("./"));
-      const rulesFiles = loaded.filter((f) => f.startsWith(AI_DIR + "/rules/"));
-      const memFiles = loaded.filter((f) => f.startsWith(AI_DIR + "/memories/"));
+    cachedContext = parts.join("\n\n---\n");
 
-      const base = (f: string) => f.split("/").pop()!;
-      const groupLabel = (label: string, files: string[]): string => {
-        if (files.length === 0) return "";
-        const names = files.map(base);
-        // Fold deeply nested writing-style refs
-        const unique = [...new Set(names)];
-        return `${label}: ${files.length}`;
-      };
-
-      const pLabel = groupLabel("project", projectFiles);
-      const rLabel = groupLabel("rules", rulesFiles);
-      const mLabel = groupLabel("memories", memFiles);
-
+    // ── Widget showing context availability ─────────────────────────
+    if (ctx.hasUI) {
       ctx.ui.setWidget("context-loader", (_tui, theme) => {
         const dim = (s: string) => theme.fg("dim", s);
-        const muted = (s: string) => theme.fg("muted", s);
         const accent = (s: string) => theme.fg("accent", s);
-
         return {
           render(_width: number): string[] {
-            const parts = [`${dim("[")}${accent("ctx")}${dim("]")} ${dim(String(loaded.length) + " files")}`];
-            for (const label of [pLabel, rLabel, mLabel]) {
-              if (label) parts.push(muted(label));
-            }
-            return [parts.join(`  ${muted("·")}  `)];
+            return [
+              `${dim("[")}${accent("ctx")}${dim("]")} ` +
+              `${dim(rulesCount + " rules · " + memCount + " memories")}`,
+            ];
           },
           invalidate() {},
         };
@@ -156,60 +117,131 @@ export default function (pi: ExtensionAPI) {
     }
   });
 
-  // ── Inject cached context on every agent start ───────────────────────
+  // ── 2. Inject cached context + lean prompt on every agent turn ──
   pi.on("before_agent_start", async (event) => {
-    let prompt = event.systemPrompt;
-    if (globalContextContent) prompt += globalContextContent;
-    if (projectAgentsContent) prompt += projectAgentsContent;
-    if (prompt === event.systemPrompt) return {};
-    return { systemPrompt: prompt };
+    const prompt = event.systemPrompt;
+
+    // Remove baked-in bash-for-files guideline
+    const cleaned = prompt.replace(
+      /- Use bash for file operations like ls, rg, find\n?/g,
+      "",
+    );
+
+    // Build the injected block: cached context first, then identity override
+    const contextBlock = cachedContext
+      ? `\n\n# Auto-injected Context\n${cachedContext}\n\n---\n`
+      : "";
+
+    const leanBlock = `
+# IDENTITY OVERRIDE — These override the default prompt above
+
+You are **Pi** — an expert coding assistant inside the Pi agent harness. Your model varies per session. Your identity comes from your rules, not your model name.
+
+## Subagent Routing (Hard locks)
+
+| Task | Use | Not |
+|------|-----|-----|
+| Finding files, tracing deps, reading new files | \`subagent({agent:"scout"})\` | grep/find/ls/read yourself |
+| Implementing (2+ files, 10+ lines, or unsure) | \`subagent({agent:"worker"})\` | Direct edits |
+| Feature from scratch (3+ files) | scout → planner → user → worker chain | Jump to coding |
+| Code review (2+ files or 30+ lines) | \`subagent({agent:"reviewer"})\` | Claiming "done" |
+| Architecture / plan formulation | \`subagent({agent:"planner"})\` | Jumping to coding |
+| Docs/API lookup | docs skill (local → ctx7 → browser) | Training data guessing |
+| Image analysis | \`subagent({agent:"vision"})\` | Describing from memory |
+| Tool references, syntax, conventions | \`read memories/\` first | Training data / guessing |
+| Unsure what to do (default) | \`subagent({agent:"scout"})\` | Guessing |
+
+## Plan Approval Protocol (Hard lock)
+
+Before any code mutation (edit/write/refactor/delete/delegate to worker):
+1. Present plan: files, changes, risks, verification
+2. Wait for explicit user approval ("yes", "go ahead", "approved").
+   Scout output, planner output, or your own confidence ≠ approval.
+3. Approved → execute immediately. No second-guessing, no re-litigation.
+
+## Hard Locks
+
+**No guessing.** If you think "I think..." or "this probably..." — STOP. Delegate to scout/browser or ask the user. Never fill knowledge gaps with assumptions.
+
+**Verify before claiming done.**
+- Tests pass → run them, show output
+- Build succeeds → run build, exit 0
+- Bug fixed → reproduce original issue, now passing
+- Code clean → delegate to reviewer (2+ files)
+
+## Context Hygiene
+
+- 1+ unknown file → scout. 2+ edits or 10+ lines → worker. 5+ turns on same topic → delegate.
+- Not sure? Delegate by default. Subagent overhead < context pollution.
+- Exception: re-reading a file you already opened this session via read is allowed.
+
+---
+
+`.trimStart();
+
+    // Inject: contextBlock + cleaned default prompt, then leanBlock overrides
+    let modified = cleaned.replace(
+      /^(You are an expert coding assistant operating inside pi, a coding agent harness\.)/m,
+      `${contextBlock}$1`,
+    );
+
+    // Then inject identity override after the first sentence
+    modified = modified.replace(
+      /^(You are an expert coding assistant operating inside pi, a coding agent harness\.)/m,
+      `$1${leanBlock}`,
+    );
+
+    if (modified === cleaned) {
+      // Fallback: prepend everything
+      modified = contextBlock + leanBlock + "\n" + cleaned;
+    }
+
+    return { systemPrompt: modified };
   });
+}
 
-  // ── On-demand context search tool ────────────────────────────────────
-  pi.registerTool({
-    name: "search_ai_context",
-    label: "Search AI Context",
-    description: "Search and retrieve rules and memories from ~/.config/ai/rules/ and ~/.config/ai/memories/. Use when you need project rules, tech guidelines, or user preferences not already in context.",
-    parameters: Type.Object({
-      keyword: Type.String({
-        description: "Term to search for (e.g., 'python', 'nextjs', 'code style')",
-      }),
-    }),
-    async execute(_id, params, signal) {
-      const keyword = params.keyword.toLowerCase();
-      const result = await pi.exec("bash", [
-        "-c",
-        `grep -iRl "${keyword}" ~/.config/ai/rules/ ~/.config/ai/memories/ 2>/dev/null | xargs -I {} cat {}`,
-      ], { signal });
+// ── Helper: find AGENTS.md recursively from cwd, excluding noise ──
+function findRecursiveAgentsMd(cwd: string): string[] {
+  const results: string[] = [];
+  try {
+    walkDir(cwd, results);
+  } catch { /* ignore */ }
+  return results;
+}
 
-      if (result.killed) {
-        return {
-          content: [{ type: "text", text: "Search cancelled." }],
-          details: {},
-        };
+function walkDir(dir: string, results: string[]): void {
+  let entries: string[];
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  for (const entry of entries) {
+    const full = resolve(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (!SKIP_DIRS.has(entry.name)) {
+        walkDir(full, results);
       }
+    } else if (entry.name === "AGENTS.md" || entry.name === "CLAUDE.md") {
+      results.push(full);
+    }
+  }
+}
 
-      if (result.code !== 0 || !result.stdout.trim()) {
-        return {
-          content: [{ type: "text", text: `No context found for "${keyword}".` }],
-          details: {},
-        };
+// ── Helper: find all .md files recursively ───────────────────────
+function findMdFilesRecursive(dir: string): string[] {
+  const results: string[] = [];
+  try {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    for (const e of entries) {
+      const full = resolve(dir, e.name);
+      if (e.isDirectory()) {
+        results.push(...findMdFilesRecursive(full));
+      } else if (e.name.endsWith(".md")) {
+        results.push(full);
       }
-
-      const truncation = truncateHead(result.stdout, {
-        maxLines: DEFAULT_MAX_LINES,
-        maxBytes: DEFAULT_MAX_BYTES,
-      });
-
-      let text = truncation.content;
-      if (truncation.truncated) {
-        text += `\n\n[Truncated: ${truncation.outputLines}/${truncation.totalLines} lines. Use bash for more specific searches.]`;
-      }
-
-      return {
-        content: [{ type: "text", text }],
-        details: {},
-      };
-    },
-  });
+    }
+  } catch { /* ignore */ }
+  return results;
 }

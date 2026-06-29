@@ -18,14 +18,14 @@ When working, always respect instructions in this order:
 ├── AGENTS.md              ← this file (global defaults, context resolution, subagent routing)
 ├── agents/
 │   ├── AGENTS.md           ← subagent catalog (capabilities, models, tools per agent)
-│   ├── worker.md           ← general-purpose: read, write, edit, bash, browser (model: nvidia-nim/z-ai/glm-4.7)
-│   ├── scout.md            ← fast recon: read, grep, find, ls, bash, browser (model: gemini-3-flash)
-│   ├── planner.md          ← implementation plans: read, grep, find, ls, browser (model: openrouter-fallback/deepseek/deepseek-pro)
+│   ├── worker.md           ← general-purpose: read, write, edit, bash, browser (model: opencode-zen/deepseek-v4-flash-free)
+│   ├── scout.md            ← fast recon: read, grep, find, ls, bash, browser (model: opencode-zen/deepseek-v4-flash-free)
+│   ├── planner.md          ← implementation plans: read, grep, find, ls, browser (model: nvidia-nim/deepseek-ai/deepseek-v4-pro)
 │   ├── reviewer.md         ← code reviews: read, grep, find, ls, bash (read-only), browser
-│   └── browser.md          ← web research: browser (model: google-vertex/gemini-3.1-pro-preview)
+│   └── browser.md          ← web research: browser (model: commandcode/MiniMaxAI/MiniMax-M3)
 ├── extensions/
 │   ├── clear-command.ts    ← /clear command (permanently delete session)
-│   ├── pi-rules.ts         ← search_ai_context tool + context directive
+│   ├── pi-rules.ts         ← lean system prompt injection + context widget
 │   ├── user-decisions.ts   ← interactive TUI questionnaire + /edit-decisions command
 │   └── subagent/           ← subagent tool (spawn isolated pi processes)
 ├── memories/

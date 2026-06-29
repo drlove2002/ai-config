@@ -10,8 +10,8 @@ Subagent catalog for `~/.config/ai/agents`.
 | **`scout`** | `opencode-zen/deepseek-v4-flash-free` | read, grep, find, ls, bash, browser | Fast recon. Finds relevant files, returns compressed context for handoff.
 | **`planner`** | `commandcode/deepseek/deepseek-v4-pro` | read, grep, find, ls, browser | Architecture & plan formulation. Reads codebase, produces numbered step-by-step plans. Read-only. |
 | **`reviewer`** | `commandcode/deepseek/deepseek-v4-pro` | read, grep, find, ls, bash (read-only), browser | Code review. Analyzes diffs and modified files for bugs, security, maintainability. |
-| **`browser`** | `opencode-zen/deepseek-v4-flash-free` | browser | Web research. Fetches pages, scrapes docs, and can inspect screenshots when page layout or visual state matters. |
-| **`vision`** | `google-vertex/gemini-3.1-pro-preview` | read | Image analysis. Reads image files (png, jpg, gif, webp) and returns dense structured descriptions of layout, text, UI elements, and visual state. |
+| **`browser`** | `commandcode/MiniMaxAI/MiniMax-M3` | browser | Web research. Fetches pages, scrapes docs, and can inspect screenshots when page layout or visual state matters. |
+| **`vision`** | `commandcode/MiniMaxAI/MiniMax-M3` | read | Image analysis. Reads image files (png, jpg, gif, webp) and returns dense structured descriptions of layout, text, UI elements, and visual state. |
 
 ## Usage Patterns
 

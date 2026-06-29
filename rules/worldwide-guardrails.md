@@ -28,14 +28,23 @@ Git repos live inside sub-projects. Always use `git -C <subproject>` or `cd` int
 ### 6. Ask when unsure — never assume
 When multiple approaches exist, ask. When something is unclear, stop and surface ambiguity. This caused 116+ corrections (user says "don't do that" or "that's wrong").
 
-### 7. Subagent by default — don't explore with direct reads
-See orchestrator.md Context Hygiene for thresholds and usage. Delegate exploration to `scout`, implementation to `worker`. Even "small" tasks like writing a Nix module — subagent overhead is cheaper than context pollution.
+### 7. Delegate by default — subagent overhead is cheaper than context pollution
+Subagent as default, direct work as exception. See orchestrator.md for exact thresholds (LOCK 1 routing table + Context Hygiene).
+
+Quick reference: 1+ unknown file → scout. 2+ files to edit or 30+ lines → worker. 5+ turns on same topic → delegate next step.
 
 ### 8. Save plans before moving on
 When a discussion produces a durable plan (architecture decisions, refactor phases, process changes), save it to `wwideas/issues/` or the target repo's `issues/` directory immediately — before the conversation moves on and the plan disappears into compacted history. Plans that exist only in chat are lost plans.
 
 ### 9. Subagent routing: match the right agent to the task
-See routing table in `orchestrator.md` under "Which Agent When".
+The routing table is injected into every session by pi-rules.ts. See orchestrator.md for the full decision tree and context hygiene rules.
+
+### 10. Never touch production without explicit approval
+- No SSH, deploy, restart, or any mutation of live systems unless the user says to do it
+- No testing on production — use TEST=1, local environment, or ask first
+- No debug logging in prod binaries — remove before any deploy
+- No deploying uncommitted builds
+- When in doubt, ask
 ---
 
 ## Integration Hotspots (Reference)
@@ -95,13 +104,13 @@ After proto changes:
 
 | # | Pattern | Count | Prevented by rule |
 |---|---------|-------|-------------------|
-| FM1 | Git history not checked before changes | 49 sessions with pattern | Rule 1 |
-| FM2 | Unsafe assumptions (wrong error codes, naming, semantics) | 138 sessions with pattern | Rules 5, 6 |
-| FM3 | Agent stops mid-flow on multi-file work | 4 sessions with pattern | Rule 7 (delegate to worker) |
-| FM4 | Over-engineering (should be simpler) | 49 sessions with pattern | Rules 6, 7 |
+| FM1 | Git history not checked before changes | 51 sessions with pattern | Rule 1 |
+| FM2 | Unsafe assumptions (wrong error codes, naming, semantics) | 182 sessions with pattern | Rules 5, 6 |
+| FM3 | Agent stops mid-flow on multi-file work | 6 sessions with pattern | Rule 7 (delegate to worker) |
+| FM4 | Over-engineering (should be simpler) | 76 sessions with pattern | Rules 6, 7 |
 | FM5 | Git commands at workspace root (not a repo) | 20 sessions with pattern | Rule 4 |
-| FM6 | AGENTS.md not read before acting | 44 sessions with pattern | Rule 2 |
-| FM7 | Edit tool failures (stale anchors, no pre-read) | 29 sessions with pattern | Read before edit |
+| FM6 | AGENTS.md not read before acting | 48 sessions with pattern | Rule 2 |
+| FM7 | Edit tool failures (stale anchors, no pre-read) | 45 sessions with pattern | Read before edit |
 | FM8 | Circular thinking / open-thinking paralysis | 4 sessions with pattern | No Circular Thinking (orchestrator.md) |
 <!-- AUTO:FAILURE_MODES_END -->
 
@@ -134,6 +143,6 @@ After proto changes:
 
 This file's auto-generated sections (Failure Modes, this metadata block) are refreshed daily by `update-guardrails.py` triggered via systemd timer. The HARD RULES and Integration Hotspots sections are hand-curated and never overwritten.
 
-**Last analysis**: 2026-06-13 (240 sessions, incremental)
+**Last analysis**: 2026-06-26 (325 sessions, incremental)
 **Run**: `~/.config/ai/scripts/update-guardrails.py`
 <!-- AUTO:EVOLUTION_META_END -->

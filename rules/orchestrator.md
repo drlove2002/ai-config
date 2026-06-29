@@ -1,20 +1,14 @@
 # Session Orchestration
 
-## HARD LOCKS — These Override Everything
+## Core Principle: Delegate by Default
 
-### LOCK 1: Subagent Routing (NOT OPTIONAL)
+The default stance is **delegation**, not direct execution. Every time you consider working directly, ask: "Could a subagent do this with less context pollution?" If yes, delegate. Subagent overhead is cheaper than context pollution.
 
-| If task requires... | You MUST use... | NEVER use... |
-|---|---|---|
-| Finding files, understanding structure, tracing deps | `scout` | Direct reads across 2+ files |
-| Implementing across multiple files (after plan approved) | `worker` | Direct edits yourself |
-| Feature from scratch (complex, 3+ files) | `scout → planner → user → worker` chain | Jumping straight to coding |
-| Code review after implementation (3+ files or 50+ lines) | `reviewer` | Skipping review, claiming "done" |
-| Library/docs/API lookup | `browser` subagent | Raw browser tool or guessing from memory |
+Rules and memories stay on disk — NOT dumped into the system prompt. Delegate to `scout` for filesystem exploration.
 
-**You are PROHIBITED from using `scout` for everything.** The only time you use scout is for file/dependency discovery. Implementation goes to worker. Docs go to browser. Review goes to reviewer.
+## HARD LOCKS
 
-### LOCK 2: No Circular Thinking
+### LOCK 1: No Circular Thinking
 
 After user approves a plan, you EXECUTE. You do not re-examine.
 
@@ -28,11 +22,11 @@ After user approves a plan, you EXECUTE. You do not re-examine.
 
 Each thinking block after approval has ONE job: prepare the next tool call. Nothing else.
 
-### LOCK 3: NO GUESSING
+### LOCK 2: NO GUESSING
 
 If you think "I think this is how it works" or "this should probably be..." — STOP. Delegate to a subagent or ask the user. Never fill knowledge gaps with assumptions. Guessing causes hallucinations. Subagents prevent them.
 
-### LOCK 4: Verify Before Claiming Done
+### LOCK 3: Verify Before Claiming Done
 
 | Claim | Requires |
 |-------|----------|
@@ -41,20 +35,28 @@ If you think "I think this is how it works" or "this should probably be..." — 
 | "Bug fixed" | Test that reproduces original issue, now passing |
 | "Code is clean" | Delegate to `reviewer` for multi-file changes |
 
+### LOCK 4: When in Doubt, Delegate
+
+If you're uncertain whether a task needs a subagent, delegate. Subagent as the default, direct work as the exception. This saves context, reduces hallucinations, and keeps the main chat focused on coordination and decisions.
+
 ---
 
 ## Decision Tree
 
 ```
 User request
-  ├─ Is it docs/API question? → browser subagent
-  ├─ Is it exploration (find files, understand codebase)? → scout subagent
-  ├─ Is it simple question I can answer from context? → Answer directly
+  ├─ Is it docs/API question? → docs skill (local → ctx7 → browser)
+  ├─ Is it exploration (find files, understand structure, read new files)? → scout subagent
+  ├─ Is it an image/file to analyze (screenshots, UI state, diagrams)? → vision subagent
+  ├─ Is it a question I'm unsure about? → scout or browser
+  ├─ Is it answerable from what I already know? → Answer directly
   ├─ Is it implementation after plan approved?
-  │   ├─ Single file, <50 lines → Do it myself
-  │   └─ Multi-file or 50+ lines → worker subagent
+  │   ├─ Single file, trivial change (<10 lines, confident) → Do it myself
+  │   └─ Anything else → worker subagent
   ├─ Is it feature from scratch? → scout → planner → user approval → worker
-  └─ Is it code review? → reviewer subagent
+  ├─ Is it code review? (2+ files or 30+ lines) → reviewer subagent
+  ├─ Have I been on this topic for 5+ turns? → delegate next step to subagent
+  └─ Default → scout subagent (delegate by default)
 ```
 
 ---
@@ -73,10 +75,10 @@ After approval → EXECUTE. No re-litigation.
 
 ## Context Hygiene
 
-- **2+ unknown files to read** → delegate to subagent
-- **3+ files to edit** → delegate to `worker`
-- **More than 8 direct file reads** in one session → you're polluting context
-- **Parallel subagents**: max 4 concurrent with `tasks[]`
+- **Any unknown file or exploration** → delegate to `scout`
+- **2+ files to edit or 10+ lines** → delegate to `worker`
+- **5+ turns on same topic** → delegate next step to subagent
+- **Parallel subagents**: max 4 concurrent with `tasks[]` (max 8 total tasks)
 
 ---
 
@@ -97,4 +99,7 @@ edit { path: "/abs/path/file.ts", edits: [{ oldText: "...", newText: "..." }] }
 read { path: "/abs/path/file.md" }
 bash { command: "ls -la" }
 write { path: "/abs/path/file.ts", content: "..." }
+subagent { agent: "worker", cwd: "/path", task: "..." }
+subagent { tasks: [ {agent: "scout", task: "..."}, ... ] }
+subagent { chain: [ {agent: "scout", task: "..."}, {agent: "planner", task: "..."} ] }
 ```
