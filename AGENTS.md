@@ -63,13 +63,13 @@ When working, always respect instructions in this order:
 - **Non-destructive**: Never delete or revert user work unless explicitly requested.
 - **Temporary Files & Testing**: For any non-project-related testing, downloading files from the internet, or creating scratch files, ALWAYS use the Linux temporary directory (e.g., `/tmp`). Do not pollute the active workspace or the user's home directory with temporary artifacts.
 
-## System Configuration (NixOS)
+## System Configuration (macOS + nix-darwin)
 
-This machine runs NixOS.
+This machine runs macOS with nix-darwin for declarative system management.
 
-- **Configuration Source**: The declarative source of truth for the entire system configuration is located at `~/.config/nixos/`.
-- **System Changes**: To inspect system settings, installed packages, or core services, always read the configuration files within `~/.config/nixos/` rather than looking in `/etc/`.
-- **Applying Changes**: Never attempt to modify system state mutably (e.g., via `apt` or `dnf`). If system-level changes are required, modify the relevant Nix expressions in `~/.config/nixos/` and rebuild the system.
+- **Configuration Source**: The declarative source of truth for system configuration is located at `~/.config/nix-darwin/`.
+- **System Changes**: To inspect system settings, installed packages, or core services, always read the configuration files within `~/.config/nix-darwin/` rather than looking in `/etc/`.
+- **Applying Changes**: Never attempt to modify system state mutably (e.g., via `brew` directly). If system-level changes are required, modify the relevant Nix expressions in `~/.config/nix-darwin/` and rebuild with `darwin-rebuild switch`.
 
 ## Subagents
 

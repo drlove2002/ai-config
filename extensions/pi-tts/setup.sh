@@ -31,7 +31,7 @@ fi
 if ! command -v nix &>/dev/null; then
     echo ""
     echo "nix not found."
-    echo "pi-tts needs nix to provide libstdc++ for pocket-tts's torch runtime."
+    echo "pi-tts needs nix to provide system libraries for pocket-tts."
     echo ""
     echo "Then re-run: $0"
     exit 1
@@ -41,7 +41,6 @@ cat > "$BIN_DIR/pocket-tts-cli" <<'WRAPPER'
 #!/usr/bin/env bash
 set -euo pipefail
 
-export LD_LIBRARY_PATH="$(nix eval --raw nixpkgs#gcc.cc.lib.outPath)/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 exec uvx --from pocket-tts pocket-tts "$@"
 WRAPPER
 chmod +x "$BIN_DIR/pocket-tts-cli"

@@ -2,7 +2,7 @@
  * pi-tts — Local text-to-speech extension for Pi
  *
  * Speaks <voice> tagged content from assistant responses using
- * pocket-tts for synthesis and ffplay for audio output.
+ * pocket-tts for synthesis and afplay (macOS native) for audio output.
  *
  * Requires pocket-tts running on localhost:18080.
  * Setup: ./setup.sh
@@ -11,10 +11,9 @@
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { spawn, type ChildProcess } from "node:child_process";
-import { Readable } from "node:stream";
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 const CONFIG_DIR = join(homedir(), ".config", "ai");
@@ -200,27 +199,24 @@ export default function (pi: ExtensionAPI) {
 
       if (!resp.ok || !resp.body) return;
 
-      const ffplay = spawn("ffplay", [
-        "-nodisp",
-        "-loglevel", "quiet",
-        "-autoexit",
-        "-",
-      ]);
+      // Buffer response to a temp file for afplay (macOS native player)
+      const chunks: Buffer[] = [];
+      const reader = resp.body.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(Buffer.from(value));
+      }
+      const audioData = Buffer.concat(chunks);
+      const tmpFile = join(tmpdir(), `pi-tts-${Date.now()}.wav`);
+      writeFileSync(tmpFile, audioData);
 
-      currentFfplay = ffplay;
+      currentFfplay = spawn("afplay", [tmpFile]);
 
       await new Promise<void>((resolve) => {
-        ffplay.on("error", () => resolve());
-        ffplay.on("exit", () => resolve());
-
-        const nodeStream = Readable.fromWeb(resp.body as any);
-        nodeStream.pipe(ffplay.stdin!);
-        ffplay.stdin?.on("error", () => {
-          ffplay.kill();
-          resolve();
-        });
-        nodeStream.on("error", () => {
-          ffplay.kill();
+        currentFfplay!.on("error", () => resolve());
+        currentFfplay!.on("exit", () => {
+          try { unlinkSync(tmpFile); } catch {}
           resolve();
         });
       });

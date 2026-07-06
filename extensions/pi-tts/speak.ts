@@ -9,7 +9,9 @@
  */
 
 import { spawn } from "node:child_process";
-import { Readable } from "node:stream";
+import { writeFileSync, unlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const TTS_HOST = "127.0.0.1";
 const TTS_PORT = 18080;
@@ -160,20 +162,25 @@ async function speakSegment(seg: Segment): Promise<void> {
     return;
   }
 
-  const ffplay = spawn("ffplay", [
-    "-nodisp",
-    "-loglevel", "quiet",
-    "-autoexit",
-    "-",
-  ]);
+  const chunks: Buffer[] = [];
+  const reader = resp.body.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(Buffer.from(value));
+  }
+  const audioData = Buffer.concat(chunks);
+  const tmpFile = join(tmpdir(), `pi-tts-speak-${Date.now()}.wav`);
+  writeFileSync(tmpFile, audioData);
+
+  const player = spawn("afplay", [tmpFile]);
 
   await new Promise<void>((resolve) => {
-    ffplay.on("error", resolve);
-    ffplay.on("exit", resolve);
-    const nodeStream = Readable.fromWeb(resp.body as any);
-    nodeStream.pipe(ffplay.stdin!);
-    ffplay.stdin?.on("error", () => { ffplay.kill(); resolve(); });
-    nodeStream.on("error", () => { ffplay.kill(); resolve(); });
+    player.on("error", () => resolve());
+    player.on("exit", () => {
+      try { unlinkSync(tmpFile); } catch {}
+      resolve();
+    });
   });
 }
 

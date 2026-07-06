@@ -1,11 +1,11 @@
 {
-  "lastChangelogVersion": "0.79.1",
+  "lastChangelogVersion": "0.80.2",
   "defaultProvider": "commandcode",
   "defaultModel": "deepseek/deepseek-v4-pro",
   "packages": [
-    "/home/love/.pi/agent/packages/node_modules/pi-agent-browser"
+    "npm:pi-agent-browser"
   ],
-  "defaultThinkingLevel": "medium",
+  "defaultThinkingLevel": "high",
   "enabledModels": [
     "commandcode/deepseek/deepseek-v4-pro",
     "commandcode/MiniMaxAI/MiniMax-M3",
@@ -23,5 +23,6 @@
       "timeoutMs": 300000,
       "maxRetries": 2
     }
-  }
+  },
+  "theme": "dark"
 }

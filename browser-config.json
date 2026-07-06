@@ -1,5 +1,1 @@
-{
-  "executablePath": "/etc/profiles/per-user/love/bin/chromium",
-  "ignoreHttpsErrors": true,
-  "headless": true
-}
+{"ignoreHttpsErrors":true,"headless":true,"executablePath":"/Users/sudiproy/.agent-browser/browsers/chrome-150.0.7871.46/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"}
