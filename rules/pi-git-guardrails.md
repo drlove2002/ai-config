@@ -1,18 +1,18 @@
 # Pi Git Guardrails
 
-The `_pi/*` branches are pi's undo system. Every agent turn auto-commits there. Do not touch them.
+Protect the working tree and index while still allowing safe local history cleanup.
 
 ## Never
 
 - `git reset --hard` — destroys uncommitted work; **blocked**
-- `git reset --mixed` — rewrites working tree; **blocked**
+- `git reset --mixed` — rewrites the index and can lose staging intent; **blocked**
 - `git reset` (no flag, defaults to --mixed) — **blocked**
-- `git branch -D` or `git branch -d` any `_pi/*` branch
-- `git push` any `_pi/*` branch
+- `git reset HEAD` — mixed reset spelling; **blocked**
+- `git push` without explicit user approval
 
 ## Allowed
 
-- `git reset --soft HEAD~1` — uncommit while preserving staged changes
-- `git reset --soft` (with explicit flag) — safe; index and working tree untouched
-- `git log _pi/<branch>` — inspect commits
-- `/revert` and `/land` — user controls these, not you
+- `git reset --soft HEAD~1` — uncommit while preserving staged changes and working tree files
+- `git reset --soft <ref>` — safe for approved local history cleanup; index and working tree stay intact
+- `git restore --staged :/` — clear the index before staging logical commit groups
+- `git restore --staged <path>` — unstage specific paths without touching file contents

@@ -57,6 +57,7 @@ User request
   ├─ Is it code review? (2+ files or 30+ lines) → reviewer subagent
   ├─ Is it git commit (dirty worktree or squashing)? → commit skill
   │   NEVER skip the skill. No git add -p, no git add -A.
+  │   Inspect staged changes first. Clear unrelated staged files with git restore --staged :/ before grouping.
   │   File-level: git add <specific files>. Hunk-level: git apply --cached with curated patches.
   ├─ Have I been on this topic for 5+ turns? → delegate next step to subagent
   └─ Default → scout subagent (delegate by default)

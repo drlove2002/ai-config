@@ -57,12 +57,21 @@ If the user has a clean worktree but **many unpushed small commits**, use **Squa
 Goal: Create well-grouped commits based on logical boundaries from a dirty worktree.
 
 1. **Inspect changes:**
+   - `git -C <repo> status --short`
+   - `git -C <repo> diff --stat`
+   - `git -C <repo> diff --staged --stat`
    - `git -C <repo> diff`
    - `git -C <repo> diff --staged`
-2. **Group files:**
+2. **Normalize the index before grouping:**
+   - Read `git status --short` carefully. First-column letters mean the change is already staged.
+   - If any unrelated changes are staged, run `git -C <repo> restore --staged :/` before staging logical groups. This clears the index without touching the worktree.
+   - Verify with `git -C <repo> diff --staged --stat`; it should be empty before you start staging the first logical group unless the whole staged set belongs in commit 1.
+3. **Group files:**
    Group by feature boundary, bug fix, refactor, or paired tests/implementation.
-3. **Stage & Commit:**
+4. **Stage & Commit:**
    - Stage one logical group at a time (`git -C <repo> add <file>`).
+   - Before every commit, verify scope with `git -C <repo> diff --staged --name-status` and `git -C <repo> diff --staged --stat`.
+   - If extra files appear, stop and run `git -C <repo> restore --staged :/`, then restage only the intended group.
    - Create a conventional commit (see format below).
 
 ## Hunk-Level Commit Mode
@@ -91,8 +100,19 @@ Goal: Review and squash unpushed commits into a few high-quality logical commits
 
 1. **Verify State:** Ensure the worktree is clean.
 2. **Identify unpushed commits:** `git -C <repo> log origin/main..HEAD --oneline` to see what's unreachable from upstream.
-3. **Propose plan:** Tell the user which commits you'd squash into which groups, and ask if they want to proceed with `git reset --soft origin/main` (which they run, not you — git reset is blocked by guardrails).
-4. **Wait for user to reset**, then proceed to stage and commit logical groups.
+3. **Propose plan:** Tell the user which commits you'd squash into which groups, and ask for approval before moving `HEAD`.
+4. **Soft reset:** After approval, run `git -C <repo> reset --soft origin/main`. Soft reset preserves file contents and stages the squashed diff.
+5. **Normalize index:** Run `git -C <repo> restore --staged :/` to clear the index, then proceed to stage and commit logical groups.
+
+## Bad Local Commit Recovery
+
+Use this when the last local commit accidentally mixed unrelated staged changes.
+
+1. Inspect the bad commit: `git -C <repo> show --name-status --stat HEAD`.
+2. If the commit should be split and has not been pushed, ask for approval to uncommit it.
+3. After approval, run `git -C <repo> reset --soft HEAD~1`.
+4. Run `git -C <repo> restore --staged :/` so all changes return to the worktree unstaged.
+5. Re-enter Smart Commit Mode and create logical commits one group at a time.
 
 ## Commit Message Shape
 
@@ -154,9 +174,12 @@ Valid types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `style`.
 ## Guardrails
 - **NEVER** use `git add -A` or `git add .` — always add specific files (or specific hunks via `git apply --cached`).
 - **NEVER** use `git add -p` — it's interactive and cannot be driven programmatically. Use `git apply --cached` with curated patches instead.
+- **NEVER** commit without checking `git diff --staged --name-status` first.
+- **NEVER** assume `git add <file>` narrows the commit. If unrelated files are already staged, clear the index first with `git restore --staged :/`.
 - **NEVER** mix unrelated changes in the same commit. If unrelated changes exist in the same file, always use Hunk-Level Commit Mode.
 - **NEVER push.** Not remotely, not interactively, not as part of any workflow. Commits are local only. If the user wants to push, they do it themselves.
 - Read `git diff` before deciding grouping. For hunk-level commits, verify with `git diff --staged` before each commit.
+- `git reset --soft` is allowed only for approved local history cleanup; it preserves the index and worktree. Destructive reset forms remain blocked.
 - When `git apply --cached` fails, re-extract hunks from a fresh `git diff` — never force-apply.
 - Ensure the original intent of squashed commits is preserved in the new message bodies.
 
