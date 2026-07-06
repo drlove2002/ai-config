@@ -112,6 +112,7 @@ After proto changes:
 | FM6 | AGENTS.md not read before acting | 48 sessions with pattern | Rule 2 |
 | FM7 | Edit tool failures (stale anchors, no pre-read) | 45 sessions with pattern | Read before edit |
 | FM8 | Circular thinking / open-thinking paralysis | 4 sessions with pattern | No Circular Thinking (orchestrator.md) |
+| FM9 | Committing all changes as one monolithic commit — dumping unrelated hunks into a single commit when hunk-level staging was needed | Recurring pattern across commit sessions | commit skill — Hunk-Level Commit Mode + `git apply --cached` |
 <!-- AUTO:FAILURE_MODES_END -->
 
 ---

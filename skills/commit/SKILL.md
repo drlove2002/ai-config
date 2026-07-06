@@ -65,6 +65,26 @@ Goal: Create well-grouped commits based on logical boundaries from a dirty workt
    - Stage one logical group at a time (`git -C <repo> add <file>`).
    - Create a conventional commit (see format below).
 
+## Hunk-Level Commit Mode
+
+Goal: When the same file contains unrelated changes that should land in different commits, use selective patch application instead of file-level staging.
+
+**Only use this when a single file has two or more logically unrelated changes.** Default to file-level staging otherwise.
+
+1. **Inspect hunks:**
+   `git -C <repo> diff <file>` — review the full diff of the affected file. Use default context (`-U3`); never use `-U0` or `-U1` (too bare to anchor).
+2. **Identify hunk boundaries:**
+   Each hunk starts with `@@ -start,len +start,len @@`. Use these markers to split the diff into separate patch files. If two unrelated changes appear in the **same hunk**, they are too close together for `git apply` to separate. Either commit them together with a clear message, or ask the user to reorder the file first.
+3. **Create curated patch files:**
+   Write the target hunks (including their `@@` headers and trailing context) into `/tmp/patch-<n>.diff`. Use `write` tool; never hand-construct patch headers.
+4. **Stage via apply:**
+   - `git -C <repo> apply --cached /tmp/patch-1.diff` — stages only those hunks
+   - Verify with `git -C <repo> diff --staged` and `git -C <repo> diff`
+5. **Commit:** Create a conventional commit for this logical group.
+6. **Repeat** with remaining patches until the file is clean, then clean up `/tmp/patch-*.diff`.
+
+**Critical rule:** Every patch must apply cleanly. If `git apply --cached` fails, the hunks are overlapping or stale — re-extract them from a fresh `git diff`. Never force-apply with `--reject`. Changes that appear in the same hunk are inseparable; do not fight git to split them.
+
 ## Squash Mode
 
 Goal: Review and squash unpushed commits into a few high-quality logical commits.
@@ -76,22 +96,68 @@ Goal: Review and squash unpushed commits into a few high-quality logical commits
 
 ## Commit Message Shape
 
-Use the conventional commit format:
+Use the conventional commit format. Every commit has a title (the first line) and an optional body and footer.
+
+### Title: The WHY (≤72 chars)
+
+The title must answer: **what problem does this solve?** It describes the motivation, the bug being fixed, the user-facing gap being closed. It is NOT a diff summary — do not describe what files changed or what code was written.
 
 ```text
-type(scope): short description
+type(scope): why we are making this change
+```
 
-- Detailed bullet points for what changed
-- Brief explanation of why when useful
+| Pattern | Bad (describes what) | Good (describes why) |
+|---------|---------------------|---------------------|
+| Bug fix | `fix(auth): update token validation` | `fix(auth): prevent session expiry during active use` |
+| Feature | `feat(shop): add pagination component` | `feat(shop): let users browse items without scrolling lag` |
+| Refactor | `refactor(db): extract connection pool` | `refactor(db): stop connection leaks under concurrent load` |
+| Style | `style: run formatter on all files` | `style: enforce consistent formatting after config change` |
+| Chore | `chore: update dependencies` | `chore: patch CVE-2024-XYZ in transitive dep` |
+
+**Test your title**: if someone reads only the title in `git log --oneline`, do they understand the intent? If the title reads like a file manifest, rewrite it.
+
+### Body: The WHAT (optional but encouraged)
+
+List what changed — files, functions, logic. Group by theme if multiple areas were touched.
+
+```text
+- Moved token refresh out of request hot-path into background poller
+- Added `last_activity` column to sessions table
+- Updated auth middleware to check cached validity before refresh
+```
+
+### Footer: References (optional)
+
+```text
+Fixes #42
+Closes PROJ-123
+```
+
+### Full example
+
+```text
+fix(auth): prevent session expiry during active use
+
+The token refresh was blocking every authenticated request, causing
+p95 latency spikes of 2s when tokens were near expiry. Moving refresh
+to a background poller keeps the user session alive without blocking.
+
+- Extracted token refresh from request middleware into background task
+- Added RefreshScheduler that runs every 5 minutes for active sessions
+- Cached validity checks skip refresh when token has >10min remaining
+
+Fixes #184
 ```
 
 Valid types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `style`.
 
 ## Guardrails
-- **NEVER** use `git add -A` or `git add .` — always add specific files.
-- **NEVER** mix unrelated changes in the same commit.
+- **NEVER** use `git add -A` or `git add .` — always add specific files (or specific hunks via `git apply --cached`).
+- **NEVER** use `git add -p` — it's interactive and cannot be driven programmatically. Use `git apply --cached` with curated patches instead.
+- **NEVER** mix unrelated changes in the same commit. If unrelated changes exist in the same file, always use Hunk-Level Commit Mode.
 - **NEVER push.** Not remotely, not interactively, not as part of any workflow. Commits are local only. If the user wants to push, they do it themselves.
-- Read the diffs (`git diff`) before deciding grouping.
+- Read `git diff` before deciding grouping. For hunk-level commits, verify with `git diff --staged` before each commit.
+- When `git apply --cached` fails, re-extract hunks from a fresh `git diff` — never force-apply.
 - Ensure the original intent of squashed commits is preserved in the new message bodies.
 
 ## Output
