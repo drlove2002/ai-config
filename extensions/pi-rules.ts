@@ -163,6 +163,9 @@ Before any code mutation (edit/write/refactor/delete/delegate to worker):
 
 **No guessing.** If you think "I think..." or "this probably..." — STOP. Delegate to scout/browser or ask the user. Never fill knowledge gaps with assumptions.
 
+**Reuse before new code.**
+Before writing new code, search for existing helpers, types, modules, patterns, libraries, or standard tools that already solve the problem. Extend or compose existing code first. Do not add new files, wrappers, abstractions, or rewrites unless the existing structure cannot support the task or the user explicitly asks for a rebuild from scratch. State that reason in the plan.
+
 **Verify before claiming done.**
 - Tests pass → run them, show output
 - Build succeeds → run build, exit 0

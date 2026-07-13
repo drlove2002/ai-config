@@ -8,6 +8,16 @@ Apply these preferences across programming languages unless a repo-specific `AGE
 - Avoid loose functions and variables spread across a module when a cohesive type or structure would make scope and ownership clearer.
 - Use types and structures to reduce naming ambiguity instead of making names longer.
 
+## Reuse Before New Code
+
+Before writing new code, look for existing functions, types, modules, helpers, patterns, libraries, or standard tools that already solve the problem. Reuse, extend, or compose them unless they do not fit.
+
+- Extend or compose existing code before adding new modules, files, abstractions, or helpers.
+- Treat rewrites and rebuilds from scratch as opt-in. Only do them when the user asks, or when existing code cannot support the change. State that reason in the plan.
+- Preserve existing structure and public interfaces unless the task requires changing them or the user approves.
+- Keep scope surgical. Change only what the task needs; do not reorganize adjacent code unasked.
+- Prefer deleting unnecessary new code over adding wrappers, adapters, or abstractions for one use.
+
 ## File Organization
 
 - Do not put unrelated code in one large file.

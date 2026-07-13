@@ -91,6 +91,7 @@ After approval → EXECUTE. No re-litigation.
 - `todo_write create` before any implementation touching files
 - Break into discrete steps, one in_progress at a time
 - Minimum code, no speculation, no abstractions for single-use
+- Reuse before new code: search for existing helpers, types, modules, patterns, libraries, and standard tools before adding new files or abstractions; rewrites from scratch require explicit user intent or a stated reason in the plan.
 - Surgical changes only — don't "improve" adjacent code
 - Delete imports/variables YOUR changes made unused, not pre-existing dead code
 
