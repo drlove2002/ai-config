@@ -15,9 +15,21 @@ dist/
 # Temp files
 .tmp/
 cache/
+__pycache__/
 
 # Local/generated agent state
 auth.json
 .codex
 extensions/pi-tts/bin/
 .commandcode/
+
+# Bootstrap-generated artifacts (never tracked)
+.bootstrap-manifest.json
+rules/local-*.md
+memories/local-*/
+
+# Next.js docs installed by bootstrap (portable, machine-local; not a repo path)
+docs/next.js/
+
+# pi-tts: uv-managed virtualenv + generated wrapper (pinned by setup.sh)
+extensions/pi-tts/.venv/

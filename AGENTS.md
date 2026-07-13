@@ -18,10 +18,10 @@ When working, always respect instructions in this order:
 ├── AGENTS.md              ← this file (global defaults, context resolution, subagent routing)
 ├── agents/
 │   ├── AGENTS.md           ← subagent catalog (capabilities, models, tools per agent)
-│   ├── worker.md           ← general-purpose: read, write, edit, bash, browser (model: opencode-zen/deepseek-v4-flash-free)
-│   ├── scout.md            ← fast recon: read, grep, find, ls, bash, browser (model: opencode-zen/deepseek-v4-flash-free)
-│   ├── planner.md          ← implementation plans: read, grep, find, ls, browser (model: nvidia-nim/deepseek-ai/deepseek-v4-pro)
-│   ├── reviewer.md         ← code reviews: read, grep, find, ls, bash (read-only), browser
+│   ├── worker.md           ← general-purpose: read, write, edit, bash, browser (model: commandcode/tencent/Hy3)
+│   ├── scout.md            ← fast recon: read, grep, find, ls, bash, browser (model: commandcode/tencent/Hy3)
+│   ├── planner.md          ← implementation plans: read, grep, find, ls, browser (model: commandcode/tencent/Hy3)
+│   ├── reviewer.md         ← code reviews: read, grep, find, ls, bash (read-only), browser (model: commandcode/tencent/Hy3)
 │   └── browser.md          ← web research: browser (model: commandcode/MiniMaxAI/MiniMax-M3)
 ├── extensions/
 │   ├── clear-command.ts    ← /clear command (permanently delete session)
@@ -36,11 +36,11 @@ When working, always respect instructions in this order:
 │   └── nextjs-guidelines.md     ← Next.js App Router standards + WWPAGE focus
 ├── rules/
 │   ├── AGENTS.md           ← rules directory guide
-│   ├── default.rules       ← command allowlist (nix, cargo, pnpm, git, psql, etc.)
+│   ├── default.rules       ← command allowlist (cargo, pnpm, git, psql, uv, etc.)
 │   └── orchestrator.md     ← always-active session protocol (context hygiene, subagent routing, implementation discipline)
-├── skills/                 ← on-demand workflows (15 skills: TDD, bug triage, refactor plans, DDD, etc.)
-├── settings.json           ← default model: openrouter/deepseek/deepseek-v4-pro, thinking: low
-├── models.json             ← provider + model definitions (openrouter, groq, cloudflare, nvidia-nim)
+├── skills/                 ← on-demand workflows (TDD, bug triage, refactor plans, DDD, etc.)
+├── settings.json           ← default provider/model + thinking level (see settings.json)
+├── models.json             ← provider + model definitions (commandcode, opencode-zen, groq, cloudflare, nvidia-nim, etc.)
 ├── auth.json               ← API keys (permissions: 600)
 └── packages/               ← npm packages (pi-agent-browser)
 ```
@@ -63,13 +63,15 @@ When working, always respect instructions in this order:
 - **Non-destructive**: Never delete or revert user work unless explicitly requested.
 - **Temporary Files & Testing**: For any non-project-related testing, downloading files from the internet, or creating scratch files, ALWAYS use the Linux temporary directory (e.g., `/tmp`). Do not pollute the active workspace or the user's home directory with temporary artifacts.
 
-## System Configuration (macOS + nix-darwin)
+## Optional Local Overlay (nix or other)
 
-This machine runs macOS with nix-darwin for declarative system management.
+Shared config stays provider- and system-neutral so it works on any macOS (or other) machine. If you use nix or another local configuration system, keep its guidance out of tracked files.
 
-- **Configuration Source**: The declarative source of truth for system configuration is located at `~/.config/nix-darwin/`.
-- **System Changes**: To inspect system settings, installed packages, or core services, always read the configuration files within `~/.config/nix-darwin/` rather than looking in `/etc/`.
-- **Applying Changes**: Never attempt to modify system state mutably (e.g., via `brew` directly). If system-level changes are required, modify the relevant Nix expressions in `~/.config/nix-darwin/` and rebuild with `darwin-rebuild switch`.
+- The bootstrap script (`bootstrap/setup.sh`) looks for an optional agent overlay under `AI_NIX_CONFIG_DIR`, `~/.config/nixos/ai`, `~/.config/nix-darwin/ai`, or `~/.config/nix/ai`.
+- If that overlay has `rules/*.md` or `memories/*.md`, the bootstrap symlinks them into gitignored local paths (`rules/local-*.md`, `memories/local-*/`) that are loaded on top of the shared defaults.
+- Generated local files are never committed.
+
+Do not add machine-specific system-management instructions (e.g. "modify `~/.config/nix-darwin/` and run `darwin-rebuild switch`") to this shared file. Put those in a local overlay instead.
 
 ## Subagents
 

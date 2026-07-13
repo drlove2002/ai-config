@@ -1,6 +1,6 @@
 ---
 name: readability
-description: Examine and improve code holistically — structure, naming, readability, API design, performance, and file organization. Use when reviewing code before a pull request, cleaning up a messy module, making code production-ready, running the polish loop, or saying "make this readable", "principal review", "clean this up", "better structure", "refactor for readability", "improve performance", "fix API design".
+description: Examine and improve code holistically — structure, naming, readability, API design, performance, and file organization. Use when reviewing code before a pull request, cleaning up a messy module, making code production-ready, or saying "make this readable", "principal review", "clean this up", "better structure", "refactor for readability", "improve performance", "fix API design".
 ---
 
 # Readability

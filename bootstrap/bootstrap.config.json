@@ -1,0 +1,12 @@
+{
+  "comment": "Reserved for bootstrap tunables. Currently unused; onboard.py uses env vars + defaults.",
+  "aiConfigRepo": "https://github.com/drlove2002/ai-config.git",
+  "piNpmPackage": "@earendil-works/pi-coding-agent",
+  "pocketTtsVersion": "2.1.0",
+  "nixOverlayCandidates": [
+    "$AI_NIX_CONFIG_DIR",
+    "~/.config/nixos/ai",
+    "~/.config/nix-darwin/ai",
+    "~/.config/nix/ai"
+  ]
+}

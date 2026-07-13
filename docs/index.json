@@ -14,10 +14,10 @@
     "format": "rst"
   },
   "next.js": {
-    "path": "/data/Projects/worldwide/wwpage/node_modules/next/dist/docs",
+    "path": "~/.config/ai/docs/next.js",
     "source": "npm:next",
     "type": "api",
     "format": "md",
-    "note": "Available when wwpage node_modules exist"
+    "note": "Installed by bootstrap/setup.sh into ~/.config/ai/docs/next.js (portable; no /data path)"
   }
 }
