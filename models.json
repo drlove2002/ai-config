@@ -90,6 +90,19 @@
           "compat": {
             "thinkingFormat": "qwen-chat-template"
           }
+        },
+        {
+          "id": "tencent/Hy3",
+          "name": "Tencent Hy3 (CC)",
+          "contextWindow": 128000,
+          "maxTokens": 16384,
+          "reasoning": true,
+          "input": [
+            "text"
+          ],
+          "compat": {
+            "thinkingFormat": "qwen-chat-template"
+          }
         }
       ]
     },
@@ -309,7 +322,9 @@
           "contextWindow": 1000000,
           "maxTokens": 65536,
           "reasoning": true,
-          "input": ["text"],
+          "input": [
+            "text"
+          ],
           "compat": {
             "thinkingFormat": "qwen-chat-template"
           }
@@ -320,7 +335,9 @@
           "contextWindow": 1000000,
           "maxTokens": 65536,
           "reasoning": true,
-          "input": ["text"],
+          "input": [
+            "text"
+          ],
           "compat": {
             "thinkingFormat": "qwen-chat-template"
           }
@@ -378,6 +395,19 @@
           "input": [
             "text"
           ]
+        },
+        {
+          "id": "hy3-free",
+          "name": "Tencent Hy3 Free (Zen)",
+          "contextWindow": 128000,
+          "maxTokens": 16384,
+          "reasoning": true,
+          "input": [
+            "text"
+          ],
+          "compat": {
+            "thinkingFormat": "qwen-chat-template"
+          }
         }
       ]
     }
