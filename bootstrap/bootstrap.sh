@@ -18,7 +18,7 @@ echo "Cloning $REPO into $TMP ..."
 git clone --depth 1 "$REPO" "$TMP/repo"
 
 echo "Running bootstrap/setup.sh ..."
-"$TMP/repo/bootstrap/setup.sh" "$@"
+bash "$TMP/repo/bootstrap/setup.sh" "$@"
 status=$?
 trap - EXIT
 rm -rf "$TMP"
