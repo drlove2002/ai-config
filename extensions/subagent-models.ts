@@ -12,7 +12,7 @@
  *   6. If the model isn't enabled, offer to add it to settings.json
  *   7. For user agents, sync agents/AGENTS.md model table
  *
- * Optional typed shortcut (cheap): /subagent-model <agent> [<model>]
+ * Optional typed shortcut (cheap): /subagent-model <agent> [<model>] [<thinkingLevel>]
  */
 
 import * as fs from "node:fs";
@@ -26,6 +26,26 @@ interface PickerItem {
 	label: string;
 	description?: string;
 	search: string;
+}
+
+// Allowed thinking levels (must match pi's --thinking values).
+const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"];
+// Sentinel value for "leave current thinking level unchanged".
+const UNCHANGED = "__unchanged__";
+
+function splitModelThinking(
+	model: string,
+	literalModels: Set<string>,
+): { model: string; thinking: string | null } {
+	if (literalModels.has(model)) return { model, thinking: null };
+
+	const idx = model.lastIndexOf(":");
+	if (idx <= 0) return { model, thinking: null };
+
+	const suffix = model.slice(idx + 1);
+	if (!THINKING_LEVELS.includes(suffix)) return { model, thinking: null };
+
+	return { model: model.slice(0, idx), thinking: suffix };
 }
 
 /**
@@ -128,31 +148,31 @@ function parseFrontmatter(content: string): { frontmatter: string | null; body: 
  * a fenced frontmatter block when none exists. The body is always preserved.
  * Never rewrites arbitrary `model:` lines that appear in the body.
  */
-function writeAgentModelLine(filePath: string, newModel: string): void {
+function writeAgentFrontmatterLine(filePath: string, key: string, value: string): void {
 	const content = fs.readFileSync(filePath, "utf-8");
 	const { frontmatter, body, hadFinalNewline } = parseFrontmatter(content);
 
 	let nextFm: string;
 	if (frontmatter !== null) {
 		const lines = frontmatter.split("\n");
-		const idx = lines.findIndex((l) => /^model\s*:\s*/.test(l));
+		const idx = lines.findIndex((l) => new RegExp("^" + key + "\\s*:").test(l));
 		if (idx >= 0) {
-			lines[idx] = `model: ${newModel}`;
+			lines[idx] = `${key}: ${value}`;
 		} else {
-			lines.push(`model: ${newModel}`);
+			lines.push(`${key}: ${value}`);
 		}
 		nextFm = lines.join("\n");
 	} else {
 		// No frontmatter: prepend a fenced block, keep the body verbatim.
-		nextFm = `model: ${newModel}`;
+		nextFm = `${key}: ${value}`;
 	}
 
 	const nextBody = body.length > 0 ? (hadFinalNewline ? body : body + "\n") : "";
 	const updated = `---\n${nextFm}\n---\n${nextBody}`;
 
-	// Guard against a silent no-op: the resulting frontmatter must carry the model.
-	if (!updated.includes(`model: ${newModel}`)) {
-		throw new Error(`Failed to set model in ${filePath}`);
+	// Guard against a silent no-op: the resulting frontmatter must carry the field.
+	if (!updated.includes(`${key}: ${value}`)) {
+		throw new Error(`Failed to set ${key} in ${filePath}`);
 	}
 	fs.writeFileSync(filePath, updated, "utf-8");
 }
@@ -165,7 +185,7 @@ function writeAgentModelLine(filePath: string, newModel: string): void {
  * matching row was found and updated, false otherwise, so the caller can warn if the
  * doc table was not synced.
  */
-function syncAgentsDocTable(agentName: string, newModel: string): boolean {
+function syncAgentsDocTable(agentName: string, newModel?: string, newThinking?: string): boolean {
 	const docPath = path.join(getAgentDir(), "agents", "AGENTS.md");
 	if (!fs.existsSync(docPath)) return false;
 
@@ -174,17 +194,28 @@ function syncAgentsDocTable(agentName: string, newModel: string): boolean {
 	const content = fs.readFileSync(docPath, "utf-8");
 	if (!rowMarker.test(content)) return false;
 
-	const cellRe = /^(\| \*\*`.*?`\*\* \| )`[^`]*`/;
+	// Model is the 2nd column; thinking (when present) is the 3rd column.
+	const modelRe = /^(\| \*\*`.*?`\*\* \| )`[^`]*`/;
+	const thinkingRe = /^(\| \*\*`.*?`\*\* \| `[^`]*` \| )`[^`]*`/;
+
+	let updated = false;
 	const replaced = content
 		.split("\n")
 		.map((line) => {
 			if (!rowMarker.test(line)) return line;
-			// Replacement function: `$` in newModel is treated literally.
-			return line.replace(cellRe, (_m, prefix: string) => `${prefix}\`${newModel}\``);
+			let out = line;
+			// Replacement functions: `$` in values is treated literally.
+			if (newModel !== undefined) {
+				out = out.replace(modelRe, (_m, prefix: string) => `${prefix}\`${newModel}\``);
+			}
+			if (newThinking !== undefined) {
+				out = out.replace(thinkingRe, (_m, prefix: string) => `${prefix}\`${newThinking}\``);
+			}
+			if (out !== line) updated = true;
+			return out;
 		})
 		.join("\n");
 
-	const updated = replaced !== content;
 	if (updated) fs.writeFileSync(docPath, replaced, "utf-8");
 	return updated;
 }
@@ -205,7 +236,7 @@ function collectKnownModels(): { full: string; provider: string }[] {
 export default function subagentModelsExtension(pi: ExtensionAPI) {
 	pi.registerCommand("subagent-model", {
 		description:
-			"Interactively change a subagent's model. Pick scope, agent, and model; writes the model: frontmatter line. Optional args: <agent> [<model>].",
+			"Interactively change a subagent's model and thinking level. Pick scope, agent, model, and thinking level; writes the model:/thinkingLevel: frontmatter lines. Optional args: <agent> [<model>] [<thinkingLevel>].",
 		handler: async (args: string, ctx: any) => {
 			if (!ctx.hasUI) {
 				ctx.ui.notify("/subagent-model requires interactive mode", "error");
@@ -255,14 +286,37 @@ export default function subagentModelsExtension(pi: ExtensionAPI) {
 			modelItems.length = 0;
 			modelItems.push(...dedupedModels);
 
-			// Optional typed shortcut: <agent> [<model>]
+			// Optional typed shortcut: <agent> [<model>] [<thinkingLevel>]
 			const shortcut = args.trim();
 			let presetAgent: string | null = null;
 			let presetModel: string | null = null;
+			let presetThinking: string | null = null;
 			if (shortcut) {
 				const parts = shortcut.split(/\s+/);
 				presetAgent = parts[0] ?? null;
 				presetModel = parts[1] ?? null;
+				if (presetModel) {
+					const parsed = splitModelThinking(presetModel, seenModels);
+					presetModel = parsed.model;
+					presetThinking = parsed.thinking;
+				}
+				if (parts[2]) {
+					if (!THINKING_LEVELS.includes(parts[2])) {
+						ctx.ui.notify(
+							`Invalid thinking level "${parts[2]}". Use one of: ${THINKING_LEVELS.join(", ")}`,
+							"error",
+						);
+						return;
+					}
+					if (presetThinking && presetThinking !== parts[2]) {
+						ctx.ui.notify(
+							`Conflicting thinking levels: model suffix uses "${presetThinking}" but shortcut uses "${parts[2]}".`,
+							"error",
+						);
+						return;
+					}
+					presetThinking = parts[2];
+				}
 			}
 
 			// 1. Scope
@@ -310,8 +364,8 @@ export default function subagentModelsExtension(pi: ExtensionAPI) {
 				const agentItems: PickerItem[] = agents.map((a) => ({
 					value: a.name,
 					label: `${a.name}  (${a.source})`,
-					description: `model: ${a.model ?? "(none)"}`,
-					search: `${a.name} ${a.source} ${a.model ?? ""}`.toLowerCase(),
+					description: `model: ${a.model ?? "(none)"}; thinking: ${a.thinkingLevel ?? "(none)"}`,
+					search: `${a.name} ${a.source} ${a.model ?? ""} ${a.thinkingLevel ?? ""}`.toLowerCase(),
 				}));
 				const agentVal = await pick(ctx, "Select agent to re-model", agentItems, false);
 				if (!agentVal) {
@@ -340,30 +394,59 @@ export default function subagentModelsExtension(pi: ExtensionAPI) {
 			}
 
 			const oldModel = selected.model ?? "(none)";
+			const oldThinking = selected.thinkingLevel ?? "(none)";
+
+			// 3b. Thinking level. Prompt interactively whenever the model was chosen
+			// interactively (no preset model). A preset 2-arg shortcut leaves it unchanged.
+			let newThinking: string | null = null;
+			if (presetThinking) {
+				newThinking = presetThinking;
+			} else if (!presetModel) {
+				const thinkingItems: PickerItem[] = [
+					{
+						value: UNCHANGED,
+						label: "Leave unchanged",
+						description: `current: ${oldThinking}`,
+						search: "leave unchanged current skip",
+					},
+					...THINKING_LEVELS.map((lvl) => ({
+						value: lvl,
+						label: lvl,
+						description: lvl === selected.thinkingLevel ? "current" : undefined,
+						search: lvl,
+					})),
+				];
+				const thinkingVal = await pick(ctx, `Select thinking level for ${selected.name}`, thinkingItems, true);
+				if (!thinkingVal) {
+					ctx.ui.notify("Canceled.", "info");
+					return;
+				}
+				if (thinkingVal !== UNCHANGED) newThinking = thinkingVal;
+			}
 
 			// 4. Confirm
-			const ok = await ctx.ui.confirm(
-				`Change ${selected.name}?`,
-				`${oldModel}  →  ${newModel}`,
-			);
+			const changeLines = [`model: ${oldModel}  →  ${newModel}`];
+			if (newThinking !== null) changeLines.push(`thinkingLevel: ${oldThinking}  →  ${newThinking}`);
+			const ok = await ctx.ui.confirm(`Change ${selected.name}?`, changeLines.join("\n"));
 			if (!ok) {
 				ctx.ui.notify("Canceled.", "info");
 				return;
 			}
 
-			// 5. Write agent model line
+			// 5. Write agent frontmatter lines
 			await withFileMutationQueue(selected.filePath, async () => {
-				writeAgentModelLine(selected!.filePath, newModel);
+				writeAgentFrontmatterLine(selected!.filePath, "model", newModel);
+				if (newThinking !== null) writeAgentFrontmatterLine(selected!.filePath, "thinkingLevel", newThinking);
 			});
 
 			if (selected.source === "user") {
 				const docUpdated = await withFileMutationQueue(
 					path.join(getAgentDir(), "agents", "AGENTS.md"),
-					async () => syncAgentsDocTable(selected!.name, newModel),
+					async () => syncAgentsDocTable(selected!.name, newModel, newThinking ?? undefined),
 				);
 				if (!docUpdated) {
 					ctx.ui.notify(
-						`Wrote ${selected.name} model, but agents/AGENTS.md row was not updated (no matching row).`,
+						`Wrote ${selected.name} model/thinking, but agents/AGENTS.md row was not updated (no matching row).`,
 						"warning",
 					);
 				}

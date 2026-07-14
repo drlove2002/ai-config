@@ -4,14 +4,14 @@ Subagent catalog for `~/.config/ai/agents`.
 
 ## Agent Definitions
 
-| Agent | Model | Tools | Description |
-|-------|-------|-------|-------------|
-| **`worker`** | `opencode-zen/hy3-free` | read, edit, write, bash, grep, find, ls, browser | General-purpose. Executes approved coding plans: reads files, edits code, runs commands, browses web. |
-| **`scout`** | `opencode-zen/hy3-free` | read, grep, find, ls, bash, browser | Fast recon. Finds relevant files, returns compressed context for handoff. |
-| **`planner`** | `commandcode/tencent/Hy3` | read, grep, find, ls, browser | Architecture & plan formulation. Reads codebase, produces numbered step-by-step plans. Read-only. |
-| **`reviewer`** | `commandcode/tencent/Hy3` | read, grep, find, ls, bash (read-only), browser | Code review. Analyzes diffs and modified files for bugs, security, maintainability. |
-| **`browser`** | `commandcode/MiniMaxAI/MiniMax-M3` | browser | Web research. Fetches pages, scrapes docs, and can inspect screenshots when page layout or visual state matters. |
-| **`vision`** | `commandcode/MiniMaxAI/MiniMax-M3` | read | Image analysis. Reads image files (png, jpg, gif, webp) and returns dense structured descriptions of layout, text, UI elements, and visual state. |
+| Agent | Model | Thinking | Tools | Description |
+|-------|-------|---------|-------|-------------|
+| **`worker`** | `opencode-zen/hy3-free` | `medium` | read, edit, write, bash, grep, find, ls, browser | General-purpose. Executes approved coding plans: reads files, edits code, runs commands, browses web. |
+| **`scout`** | `opencode-zen/deepseek-v4-flash-free` | `-` | read, grep, find, ls, bash, browser | Fast recon. Finds relevant files, returns compressed context for handoff. |
+| **`planner`** | `openai-codex/gpt-5.5` | `-` | read, grep, find, ls, browser | Architecture & plan formulation. Reads codebase, produces numbered step-by-step plans. Read-only. |
+| **`reviewer`** | `openai-codex/gpt-5.5` | `-` | read, grep, find, ls, bash (read-only), browser | Code review. Analyzes diffs and modified files for bugs, security, maintainability. |
+| **`browser`** | `commandcode/MiniMaxAI/MiniMax-M3` | `-` | browser | Web research. Fetches pages, scrapes docs, and can inspect screenshots when page layout or visual state matters. |
+| **`vision`** | `commandcode/MiniMaxAI/MiniMax-M3` | `-` | read | Image analysis. Reads image files (png, jpg, gif, webp) and returns dense structured descriptions of layout, text, UI elements, and visual state. |
 
 ## Usage Patterns
 
