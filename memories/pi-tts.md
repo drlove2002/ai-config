@@ -16,7 +16,7 @@ Local TTS for pi via the `pi-tts` extension at `~/.config/ai/extensions/pi-tts/`
 ## Config (`~/.config/ai/pi-tts.json`)
 
 - Keys: `enabled`, `voice`, `host`, `port`.
-- `pi-tts.json` sets `voice="alba"`, `host="127.0.0.1"`, `port=18080`, `enabled=false`.
+- `pi-tts.json` sets `voice="alba"`, `host="127.0.0.1"`, `port=18080`, `enabled=true`.
 - Effective default voice: read from `pi-tts.json`. If the config file is absent,
   the extension falls back to `"alba"` (see `extensions/pi-tts/index.ts`).
 
