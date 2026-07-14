@@ -29,10 +29,14 @@ if ! command -v uv &>/dev/null; then
   exit 1
 fi
 
-# Create the venv if missing.
+# Create or repair the venv if missing or broken.
 if [ ! -x "$VENV_DIR/bin/python" ]; then
   echo "Creating venv at $VENV_DIR ..."
-  uv venv "$VENV_DIR" --python 3.12
+  if [ -d "$VENV_DIR" ]; then
+    uv venv "$VENV_DIR" --python 3.12 --clear
+  else
+    uv venv "$VENV_DIR" --python 3.12
+  fi
 fi
 
 # (Re)install the pinned pocket-tts into the venv.

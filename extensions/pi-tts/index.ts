@@ -134,6 +134,7 @@ export default function (pi: ExtensionAPI) {
 
     stopTtsServer();
 
+    let launchFailure = "";
     ttsServer = spawn(TTS_BINARY, [
       "serve",
       "--host", ttsHost,
@@ -144,12 +145,16 @@ export default function (pi: ExtensionAPI) {
     });
 
     ttsServer.on("error", (err) => {
-      lastDiagnosis = `Server spawn failed: ${err.message}`;
+      launchFailure = `Server spawn failed: ${err.message}`;
+      lastDiagnosis = launchFailure;
+      ttsServer = null;
+      serverReady = false;
     });
 
     ttsServer.on("exit", (code) => {
       if (code !== 0 && code !== null) {
-        lastDiagnosis = `Server exited with code ${code}`;
+        launchFailure = `Server exited with code ${code}`;
+        lastDiagnosis = launchFailure;
       }
       ttsServer = null;
       serverReady = false;
@@ -158,10 +163,11 @@ export default function (pi: ExtensionAPI) {
     // Wait for server to come up (poll up to 5s)
     for (let i = 0; i < 10; i++) {
       await new Promise(r => setTimeout(r, 500));
+      if (launchFailure) return false;
       if (await checkServer()) return true;
     }
 
-    lastDiagnosis = `Server started but not reachable on ${ttsHost}:${ttsPort}`;
+    lastDiagnosis = launchFailure || `Server started but not reachable on ${ttsHost}:${ttsPort}`;
     return false;
   }
 
@@ -419,6 +425,11 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("session_start", async (_event, ctx) => {
+    if (!enabled) {
+      updateStatus(ctx);
+      return;
+    }
+
     await checkServer();
     if (!serverReady) {
       await startTtsServer();
@@ -435,7 +446,7 @@ export default function (pi: ExtensionAPI) {
   pi.on("message_start", async (event) => {
     if (event.message.role === "assistant") {
       resetStreamingState();
-      if (!serverReady) await checkServer();
+      if (enabled && !serverReady) await checkServer();
     }
   });
 
@@ -492,7 +503,12 @@ export default function (pi: ExtensionAPI) {
     description: "Toggle TTS on/off",
     handler: async (_args, ctx) => {
       enabled = !enabled;
-      if (!enabled) stopSpeech();
+      if (!enabled) {
+        stopSpeech();
+      } else if (!serverReady) {
+        await checkServer();
+        if (!serverReady) await startTtsServer();
+      }
       saveConfig({ voice: currentVoice, host: ttsHost, port: ttsPort, enabled });
       const serverStatus = serverReady ? "server up" : `server down (${diagnose()})`;
       ctx.ui.notify(
