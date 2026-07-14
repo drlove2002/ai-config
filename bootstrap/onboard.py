@@ -365,6 +365,62 @@ def setup_tts(dry_run: bool) -> None:
         log("WARN: pi-tts setup failed.")
 
 
+# ── Kitty notification permission ──
+
+def _kitty_osc99_payload(value: str) -> str:
+    """Mirror notify.ts kittyPayload: drop control chars, escape backslash/semicolon."""
+    cleaned = "".join(ch for ch in value if ord(ch) >= 0x20 and ord(ch) != 0x7F)
+    return cleaned.replace("\\", "\\\\").replace(";", "\\;")
+
+
+def _tmux_passthrough(seq: str) -> str:
+    """Mirror notify.ts tmuxPassthrough: double ESC, wrap in DCS passthrough."""
+    doubled = seq.replace("\x1b", "\x1b\x1b")
+    return f"\x1bPtmux;{doubled}\x1b\\"
+
+
+def setup_kitty_notifications(dry_run: bool) -> None:
+    """Best-effort trigger for macOS/kitty to prompt for notification permission.
+
+    Non-fatal: logs warnings only. Sends one OSC 99 notification to /dev/tty with
+    a pleasant sound so macOS/kitty can prompt the user to allow alerts.
+    """
+    if dry_run:
+        log("[dry-run] would prompt to send a kitty notification for permission (if in kitty + interactive).")
+        return
+
+    if not sys.stdin.isatty():
+        log("Skipped kitty notification permission step (non-interactive).")
+        return
+
+    if not os.environ.get("KITTY_WINDOW_ID"):
+        log("Not inside kitty (KITTY_WINDOW_ID unset). Run /notify-permission in Pi from official kitty later to enable alerts.")
+        return
+
+    if not prompt_yes_no(
+        "Send a kitty notification now so macOS can prompt for notification permission?",
+        default=True,
+    ):
+        log("Skipped kitty notification permission prompt.")
+        return
+
+    try:
+        title = "Pi Agent"
+        body = "Pi wants to send you notifications. Click Allow to enable completion alerts."
+        seq = (
+            f"\x1b]99;i=1:d=0:a=focus:s=aW5mbw==:p=title;{_kitty_osc99_payload(title)}\x1b\\"
+            f"\x1b]99;i=1:p=body;{_kitty_osc99_payload(body)}\x1b\\"
+        )
+        if os.environ.get("TMUX"):
+            seq = _tmux_passthrough(seq)
+        with open("/dev/tty", "w") as tty:
+            tty.write(seq)
+            tty.flush()
+        log("Sent kitty notification request; click Allow if macOS/kitty prompts.")
+    except Exception as e:
+        log(f"WARN: failed to send kitty notification: {e}")
+
+
 # ── Verify + manifest ──
 
 def verify(dry_run: bool) -> dict:
@@ -443,6 +499,7 @@ def main() -> int:
         link_nix_overlay(args.dry_run)
         if not args.skip_tts:
             setup_tts(args.dry_run)
+        setup_kitty_notifications(args.dry_run)
     except Exception as e:
         log(f"WARN: onboarding step failed: {e}")
     checks = verify(args.dry_run)
