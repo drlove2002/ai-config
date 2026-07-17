@@ -1,7 +1,7 @@
 ---
 name: docs
 description: >-
-  Look up documentation for any library, framework, or product concept. Checks local docs first (Next.js, Nextcord, Discord.py, wwideas product docs), falls back to Context7 API, then browser. Use when the user asks about API syntax, configuration, version migration, setup, or "how do I" with a specific technology. Never rely on training data for API details.
+  Look up documentation for any library, framework, or product concept. Checks local docs first (Nextcord, Discord.py, Turso, Toasty, wwideas product docs), falls back to Context7 API, then browser. Use when the user asks about API syntax, configuration, version migration, setup, or "how do I" with a specific technology. Never rely on training data for API details.
 ---
 
 # Docs
@@ -21,16 +21,17 @@ If the question is about the Worldwide product (how a feature works, what a syst
 
 ## 1. Local Docs
 
-Check `~/.config/ai/docs/index.json` for the package. Currently:
+Check `~/Projects/worldwide/docs/index.json` for the package. Currently:
 
 | Package | Local path | Format |
 |---------|-----------|--------|
-| Next.js | `~/.config/ai/docs/next.js/` | `.md` |
-| Nextcord | `~/.config/ai/docs/nextcord/` | `.rst` |
-| Discord.py | `~/.config/ai/docs/discord.py/` | `.rst` |
+| Nextcord | `~/Projects/worldwide/docs/nextcord/docs/` | `.rst` |
+| Discord.py | `~/Projects/worldwide/docs/discord.py/docs/` | `.rst` |
+| Turso | `~/Projects/worldwide/docs/turso/docs/` | `.md` |
+| Toasty | `~/Projects/worldwide/docs/toasty/docs/` | `.md` |
 
 If the package is in the index, read the local files:
-- Start from `index.md` or `index.rst` to understand structure
+- Start from `index.md`, `index.rst`, `README.md`, or the package's documented entrypoint
 - Grep for the specific topic
 - Read the most relevant page fully — don't skim
 

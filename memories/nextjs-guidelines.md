@@ -29,5 +29,5 @@ Use this note when editing Next.js applications, especially App Router code that
 ## WWPAGE Focus
 
 - `wwpage` uses Next.js App Router and has `reactCompiler: true` in `next.config.mjs`.
-- Before changing routing, rendering, caching, navigation, or middleware behavior in `wwpage`, consult the installed docs under `/data/Projects/worldwide/wwpage/node_modules/next/dist/docs/`.
+- Before changing routing, rendering, caching, navigation, or middleware behavior in `wwpage`, consult the installed docs under `$HOME/Projects/worldwide/wwpage/node_modules/next/dist/docs/`.
 - For framework changes, start from `index.md`, then the relevant App Router or architecture page, and only then edit code.

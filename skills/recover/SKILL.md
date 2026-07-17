@@ -82,4 +82,4 @@ Present results. Ask if this should be committed as a single `fix:` commit.
 - Never revert the entire commit blindly. Preserve feature work.
 - Never add unrelated cleanup during recovery. Fix only the regression.
 - Always present the classification before reverting. Let the user confirm.
-- After recovery, save a brief postmortem to `wwideas/issues/` — what drifted, why, and which guardrail would have caught it.
+- After recovery, save a brief postmortem to `$HOME/Projects/worldwide/plan/` — what drifted, why, and which guardrail would have caught it.
