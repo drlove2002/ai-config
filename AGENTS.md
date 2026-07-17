@@ -18,11 +18,8 @@ When working, always respect instructions in this order:
 ├── AGENTS.md              ← this file (global defaults, context resolution, subagent routing)
 ├── agents/
 │   ├── AGENTS.md           ← subagent catalog (capabilities, models, tools per agent)
-│   ├── worker.md           ← general-purpose: read, write, edit, bash, browser (model: commandcode/tencent/Hy3)
-│   ├── scout.md            ← fast recon: read, grep, find, ls, bash, browser (model: commandcode/tencent/Hy3)
-│   ├── planner.md          ← implementation plans: read, grep, find, ls, browser (model: commandcode/tencent/Hy3)
-│   ├── reviewer.md         ← code reviews: read, grep, find, ls, bash (read-only), browser (model: commandcode/tencent/Hy3)
-│   └── browser.md          ← web research: browser (model: commandcode/MiniMaxAI/MiniMax-M3)
+│   ├── <agent-name>.md     ← subagent definition files (discovered at runtime)
+│   └── ...
 ├── extensions/
 │   ├── clear-command.ts    ← /clear command (permanently delete session)
 │   ├── pi-rules.ts         ← lean system prompt injection + context widget
@@ -73,21 +70,15 @@ Shared config stays provider- and system-neutral so it works on any macOS (or ot
 
 Do not add machine-specific system-management instructions (e.g. "modify `~/.config/nix-darwin/` and run `darwin-rebuild switch`") to this shared file. Put those in a local overlay instead.
 
-## Subagents
+## Subagent Discovery
 
-Subagents are specialized workers that operate in isolated context windows. Use the `subagent` tool to delegate tasks without polluting the main conversation. They can be spawned individually, in parallel, or in sequential chains.
+The main agent is self-sufficient and owns tasks end to end. Subagents are optional specialized workers for cases where parallelism, specialist capability, or context isolation provides a concrete benefit. Do not delegate solely because work spans multiple files, exceeds a line threshold, lasts several turns, or feels uncertain.
 
-**Available Subagents:**
-
-- **`worker`**: General-purpose execution. Can read, write, edit, run bash, and browse. Use for approved coding tasks after the user has reviewed the plan.
-- **`scout`**: Fast codebase recon. Use to quickly find relevant files and return compressed context to hand off to other agents.
-- **`planner`**: Architecture and plan formulation. Reads codebase and requirements to produce step-by-step implementation plans without making edits.
-- **`reviewer`**: Code review specialist. Analyzes code for quality, security, and maintainability.
-- **`browser`**: Expert web browsing subagent. Use to fetch pages, scrape documentation, and return exactly the facts or snippets needed. (Fallbacks: `browser-nv`, `browser-or`).
+Available agents and their capabilities (name, description, tools, model) are listed in the live catalog injected into every session. When delegation is useful, match an agent to a bounded task and keep final decisions and verification with the main agent. Use `/subagents` to inspect or change agent configuration.
 
 **How to use Subagents:**
 
-- **Single**: `{"agent": "worker", "cwd": "/...", "task": "..."}`
-- **Parallel**: `{"tasks": [ {"agent": "scout", "task": "..."}, {"agent": "browser", "task": "..."} ]}`
-- **Chain (Sequential)**: `{"chain": [ {"agent": "scout", "task": "..."}, {"agent": "planner", "task": "... use {previous} ..."} ]}`
+- **Single**: `{"agent": "agent-name", "cwd": "/...", "task": "..."}`
+- **Parallel**: `{"tasks": [ {"agent": "agent-a", "task": "..."}, {"agent": "agent-b", "task": "..."} ]}`
+- **Chain (Sequential)**: `{"chain": [ {"agent": "agent-a", "task": "..."}, {"agent": "agent-b", "task": "... use {previous} ..."} ]}`
 Always provide an absolute `cwd` and clear, explicit instructions for the task.

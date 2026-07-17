@@ -1,110 +1,98 @@
 # Session Orchestration
 
-## Core Principle: Delegate by Default
+## Core Principle: Main Agent Owns the Task
 
-The default stance is **delegation**, not direct execution. Every time you consider working directly, ask: "Could a subagent do this with less context pollution?" If yes, delegate. Subagent overhead is cheaper than context pollution.
+The main agent is self-sufficient. It inspects, plans, implements, and verifies work directly, and remains responsible for the final result.
 
-Rules and memories stay on disk — NOT dumped into the system prompt. Delegate to `scout` for filesystem exploration.
+Subagents are optional tools, not a required workflow. File count, changed-line count, task duration, risk, or uncertainty do not automatically trigger delegation.
 
-## HARD LOCKS
+Use a subagent only when it offers a concrete benefit:
 
-### LOCK 1: No Circular Thinking
+- independent work can run in parallel without overlapping edits;
+- a specialist capability is materially better suited to a bounded task;
+- isolating a large research context keeps the main task clearer;
+- the user explicitly asks for delegation or multi-agent work.
 
-After user approves a plan, you EXECUTE. You do not re-examine.
+Do not delegate work the main agent can complete efficiently. Keep decisions, integration, and final verification in the main conversation. Validate relevant subagent findings before relying on them.
 
-**Immediate self-interrupt.** If your next thought starts with ANY of these words, delete the thought and make the tool call instead:
-- "Wait..."
-- "Actually..."
-- "But wait..."
-- "Unless..."
-- "Hmm..."
-- "What if..."
+Rules and memories stay on disk rather than being dumped wholesale into the system prompt. Read the relevant sources directly when needed.
 
-Each thinking block after approval has ONE job: prepare the next tool call. Nothing else.
+## Hard Locks
 
-### LOCK 2: NO GUESSING
+### 1. No Circular Thinking
 
-If you think "I think this is how it works" or "this should probably be..." — STOP. Delegate to a subagent or ask the user. Never fill knowledge gaps with assumptions. Guessing causes hallucinations. Subagents prevent them.
+After the user approves a plan, execute it. Do not re-litigate the approved approach unless new evidence creates a material safety or correctness issue.
 
-### LOCK 3: Verify Before Claiming Done
+### 2. No Guessing
+
+Verify uncertain facts with direct tools. Ask the user only when a material decision cannot be resolved from the available context without risking divergence from their intent. A subagent is optional, not the default answer to uncertainty.
+
+### 3. Verify Before Claiming Done
 
 | Claim | Requires |
 |-------|----------|
-| "Tests pass" | Run tests, show output |
-| "Build succeeds" | Run build, show exit 0 |
-| "Bug fixed" | Test that reproduces original issue, now passing |
-| "Code is clean" | Delegate to `reviewer` for multi-file changes |
+| "Tests pass" | Run tests and report the result |
+| "Build succeeds" | Run the build and confirm exit 0 |
+| "Bug fixed" | Reproduce the original issue with a now-passing check |
+| "Code is clean" | Inspect the diff and run relevant checks; independent review is optional |
 
-### LOCK 4: When in Doubt, Delegate
+## Default Workflow
 
-If you're uncertain whether a task needs a subagent, delegate. Subagent as the default, direct work as the exception. This saves context, reduces hallucinations, and keeps the main chat focused on coordination and decisions.
+1. Inspect the relevant files, instructions, history, and callers directly.
+2. Present the required plan and wait for explicit user approval before mutation.
+3. Implement the approved changes directly.
+4. Inspect the diff and run verification proportional to risk.
+5. Report the outcome, limitations, and any remaining user decision.
 
----
-
-## Decision Tree
-
-```
-User request
-  ├─ Is it docs/API question? → docs skill (local → ctx7 → browser)
-  ├─ Is it exploration (find files, understand structure, read new files)? → scout subagent
-  ├─ Is it an image/file to analyze (screenshots, UI state, diagrams)? → vision subagent
-  ├─ Is it a question I'm unsure about? → scout or browser
-  ├─ Is it answerable from what I already know? → Answer directly
-  ├─ Is it implementation after plan approved?
-  │   ├─ Single file, trivial change (<10 lines, confident) → Do it myself
-  │   └─ Anything else → worker subagent
-  ├─ Is it feature from scratch? → scout → planner → user approval → worker
-  ├─ Is it code review? (2+ files or 30+ lines) → reviewer subagent
-  ├─ Is it git commit (dirty worktree or squashing)? → commit skill
-  │   NEVER skip the skill. No git add -p, no git add -A.
-  │   Inspect staged changes first. Clear unrelated staged files with git restore --staged :/ before grouping.
-  │   File-level: git add <specific files>. Hunk-level: git apply --cached with curated patches.
-  ├─ Have I been on this topic for 5+ turns? → delegate next step to subagent
-  └─ Default → scout subagent (delegate by default)
-```
-
----
+Delegation may be inserted into this workflow when it has a stated concrete benefit, but it never replaces main-agent ownership.
 
 ## Plan Approval Protocol
 
-Before code editing, file writing, refactoring, or mutation commands:
+Before code editing, file writing, refactoring, deletion, or delegating implementation:
 
-1. Present a concise plan: files to touch, changes, risks, verification steps
-2. Wait for explicit user approval ("yes", "go ahead", "approved")
-3. Do NOT treat scout output, planner output, or your own confidence as approval
-
-After approval → EXECUTE. No re-litigation.
-
----
+1. Present a concise plan with files, intended changes, assumptions or risks, and verification.
+2. Wait for explicit user approval such as "yes", "go ahead", or "approved".
+3. Do not treat subagent output or confidence as user approval.
+4. After approval, execute without unnecessary delay or repeated planning.
 
 ## Context Hygiene
 
-- **Any unknown file or exploration** → delegate to `scout`
-- **2+ files to edit or 10+ lines** → delegate to `worker`
-- **5+ turns on same topic** → delegate next step to subagent
-- **Parallel subagents**: max 4 concurrent with `tasks[]` (max 8 total tasks)
+- Use direct tools for narrow and broad inspection, dependency tracing, implementation, and verification.
+- Search before re-reading large files and load only the sections needed for the current decision.
+- Keep durable findings in the appropriate plan or issue record when required.
+- Use subagents selectively for bounded parallel, specialist, or context-isolation work.
+- Do not delegate merely because a task spans multiple files, exceeds a line threshold, continues for several turns, or is uncertain.
 
----
+## Optional Subagent Protocol
+
+When delegation is beneficial:
+
+1. State the specific benefit.
+2. Give the subagent a bounded objective, relevant context, allowed files if editing, acceptance criteria, and verification expectations.
+3. Avoid overlapping write scopes between concurrent agents.
+4. Review and integrate the result in the main agent.
+5. Run final verification from the main task.
+
+If a subagent times out or fails, preserve useful partial findings and continue directly when practical. Retry or decompose only when that is more efficient than completing the work in the main agent.
 
 ## Implementation Rules
 
-- `todo_write create` before any implementation touching files
-- Break into discrete steps, one in_progress at a time
-- Minimum code, no speculation, no abstractions for single-use
-- Reuse before new code: search for existing helpers, types, modules, patterns, libraries, and standard tools before adding new files or abstractions; rewrites from scratch require explicit user intent or a stated reason in the plan.
-- Surgical changes only — don't "improve" adjacent code
-- Delete imports/variables YOUR changes made unused, not pre-existing dead code
-
----
+- Track multi-step implementation with the available todo or plan tool when useful.
+- Make the minimum approved change; avoid speculative abstractions and adjacent cleanup.
+- Reuse existing helpers, types, modules, patterns, libraries, and standard tools before adding new structures.
+- Search for callers before changing shared functions, classes, APIs, or schemas.
+- Remove imports or variables made unused by the current change, without deleting unrelated pre-existing code.
+- Preserve user changes and unrelated dirty-worktree content.
 
 ## Tool Call Shapes (Reference)
 
-```
+```text
 edit { path: "/abs/path/file.ts", edits: [{ oldText: "...", newText: "..." }] }
 read { path: "/abs/path/file.md" }
 bash { command: "ls -la" }
 write { path: "/abs/path/file.ts", content: "..." }
-subagent { agent: "worker", cwd: "/path", task: "..." }
-subagent { tasks: [ {agent: "scout", task: "..."}, ... ] }
-subagent { chain: [ {agent: "scout", task: "..."}, {agent: "planner", task: "..."} ] }
+subagent { agent: "<agent-name>", cwd: "/path", task: "..." }
+subagent { tasks: [ {agent: "<agent-a>", task: "..."}, ... ] }
+subagent { agent: "worker", workerPackage: { objective, files: [...], changes, acceptance, verification } }
+subagent { chain: [ {agent: "<agent-a>", task: "..."}, {agent: "<agent-b>", task: "..."} ] }
 ```

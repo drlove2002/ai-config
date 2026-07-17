@@ -15,7 +15,7 @@ Explore the repo to understand the current state. Sketch the major modules to bu
 
 ## 2. Write the PRD
 
-Save as `issues/NNNN-prd-....md` at the project root. Frontmatter:
+Save as `plan/NNNN-prd-....md` in the active repo root (the directory pi is running in, not a sub-project). Frontmatter:
 ```yaml
 ---
 id: NNNN
@@ -76,7 +76,7 @@ Quiz the user on titles, type, blockers, user stories covered. Wait for approval
 
 ## 5. Create Tracking Issues
 
-For each approved slice, create `issues/NNNN-....md` in dependency order. Frontmatter:
+For each approved slice, create `plan/NNNN-....md` in the active repo root, in dependency order. Frontmatter:
 ```yaml
 ---
 id: NNNN
@@ -92,7 +92,7 @@ created: YYYY-MM-DD
 Sections:
 ```markdown
 ## Parent
-`issues/NNNN-prd-....md`
+`plan/NNNN-prd-....md`
 
 ## What to build
 Concise description of this vertical slice end-to-end.

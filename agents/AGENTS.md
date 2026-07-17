@@ -2,27 +2,56 @@
 
 Subagent catalog for `~/.config/ai/agents`.
 
-## Agent Definitions
+## Agent Structure
 
-| Agent | Model | Thinking | Tools | Description |
-|-------|-------|---------|-------|-------------|
-| **`worker`** | `opencode-zen/hy3-free` | `medium` | read, edit, write, bash, grep, find, ls, browser | General-purpose. Executes approved coding plans: reads files, edits code, runs commands, browses web. |
-| **`scout`** | `opencode-zen/deepseek-v4-flash-free` | `-` | read, grep, find, ls, bash, browser | Fast recon. Finds relevant files, returns compressed context for handoff. |
-| **`planner`** | `openai-codex/gpt-5.5` | `-` | read, grep, find, ls, browser | Architecture & plan formulation. Reads codebase, produces numbered step-by-step plans. Read-only. |
-| **`reviewer`** | `openai-codex/gpt-5.5` | `-` | read, grep, find, ls, bash (read-only), browser | Code review. Analyzes diffs and modified files for bugs, security, maintainability. |
-| **`browser`** | `commandcode/MiniMaxAI/MiniMax-M3` | `-` | browser | Web research. Fetches pages, scrapes docs, and can inspect screenshots when page layout or visual state matters. |
-| **`vision`** | `commandcode/MiniMaxAI/MiniMax-M3` | `-` | read | Image analysis. Reads image files (png, jpg, gif, webp) and returns dense structured descriptions of layout, text, UI elements, and visual state. |
+Each agent is defined by a Markdown file with YAML frontmatter in the `agents/` directory:
 
-## Usage Patterns
+```yaml
+---
+name: my-agent
+description: What this agent does
+tools: read, grep, find, ls
+model: provider/model-id
+thinkingLevel: medium
+enabled: true  # optional, defaults to true
+---
+```
 
-- **Chain**: `scout` → `planner` → user approval → `worker` (implement feature from scratch)
-- **Chain**: `worker` → `reviewer` → user approval if changes expand scope → `worker` (implement then fix)
-- **Parallel**: Multiple `scout`s for separate areas of codebase
-- **Single**: `browser` for docs lookups, `scout` for quick recon
+- `name` and `description` are required.
+- `tools` is a comma-separated list of allowed tool names.
+- `model` and `thinkingLevel` override session defaults for this agent.
+- See [Agent Availability](#agent-availability) for the `enabled` field.
+- The live catalog of enabled agents is generated at session start. Use `/subagents` to inspect or change configuration.
+
+## Agent Usage
+
+Agents are invoked via the `subagent` tool in three modes (see [Tool: subagent](#tool-subagent)):
+
+- **Single**: One agent, one task.
+- **Parallel**: Up to 8 agents concurrently (max 4 at a time) for independent work.
+- **Chain**: Sequence where each step receives the prior step's output via `{previous}`.
+
+Choose an agent by matching its declared capabilities (tools, model) to the task. Available agents and their capabilities are listed in the live catalog injected at session start.
 
 ## Agent Source
 
 All agents are user-level (`source: "user"`). Project-local agents in `.pi/agents/` override when `agentScope: "both"`.
+
+## Agent Availability
+
+Each agent definition can include an optional `enabled` frontmatter field:
+
+```yaml
+---
+name: my-agent
+enabled: false  # optional, defaults to true
+---
+```
+
+- Missing or invalid values default to `enabled: true`.
+- Disabled agents are rejected before process spawning and excluded from runtime discovery.
+- In `both` scope, a disabled project definition shadows a same-named user definition.
+- Management commands (`/subagents`) list all physical definitions with state for bulk management.
 
 ## Tool: subagent
 
@@ -30,17 +59,17 @@ Invoke with the `subagent` tool. Three modes:
 
 ```toon
 // Single
-agent: scout
+agent: <agent-name>
 cwd: /path
-task: find all auth code
+task: describe the task clearly
 
 // Parallel (max 8, 4 concurrent)
 tasks[2]{agent,task}:
-  scout,find models
-  browser,fetch API docs
+  <agent-a>,find models
+  <agent-b>,fetch API docs
 
 // Chain ({previous} = output of prior step)
 chain[2]{agent,task}:
-  scout,find auth
-  planner,"using {previous}, plan refactor"
+  <agent-a>,find auth
+  <agent-b>,"using {previous}, plan refactor"
 ```
