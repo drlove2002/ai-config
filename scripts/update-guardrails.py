@@ -20,7 +20,9 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
-SESSION_DIR = Path.home() / ".pi/agent/sessions/--data-Projects-worldwide--"
+WORLDWIDE_DIR = Path.home() / "Projects/worldwide"
+SESSION_KEY = f"--{str(WORLDWIDE_DIR).strip('/').replace('/', '-')}--"
+SESSION_DIR = Path.home() / ".pi/agent/sessions" / SESSION_KEY
 GUARDRAILS_FILE = Path.home() / ".config/ai/rules/worldwide-guardrails.md"
 STATE_FILE = Path.home() / ".config/ai/.guardrails-state.json"
 
@@ -59,7 +61,7 @@ FAILURE_CATEGORIES = {
             r"\byou stopped\b", r"\bwhy did you stop\b", r"\bnot done\b",
         ],
         "label": "Agent stops mid-flow on multi-file work",
-        "rule": "Rule 7 (delegate to worker)",
+        "rule": "Rule 7 (main agent retains ownership through verification)",
     },
     "FM4_over_engineering": {
         "sig": [
