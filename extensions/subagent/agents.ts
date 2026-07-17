@@ -17,6 +17,22 @@ export interface AgentConfig {
 	systemPrompt: string;
 	source: "user" | "project";
 	filePath: string;
+	enabled: boolean;
+}
+
+/**
+ * Physical agent definition for management listing.
+ * Includes ALL definitions (no shadowing), with enabled state and source.
+ */
+export interface PhysicalAgentDefinition {
+	name: string;
+	description: string;
+	model?: string;
+	thinkingLevel?: string;
+	tools?: string[];
+	source: "user" | "project";
+	filePath: string;
+	enabled: boolean;
 }
 
 export interface AgentDiscoveryResult {
@@ -50,26 +66,32 @@ function loadAgentsFromDir(dir: string, source: "user" | "project"): AgentConfig
 			continue;
 		}
 
-		const { frontmatter, body } = parseFrontmatter<Record<string, string>>(content);
+		const { frontmatter, body } = parseFrontmatter(content);
 
-		if (!frontmatter.name || !frontmatter.description) {
+		if (!frontmatter || typeof frontmatter.name !== "string" || !frontmatter.name) {
+			continue;
+		}
+		if (typeof frontmatter.description !== "string" || !frontmatter.description) {
 			continue;
 		}
 
-		const tools = frontmatter.tools
-			?.split(",")
-			.map((t: string) => t.trim())
-			.filter(Boolean);
+		const tools = typeof frontmatter.tools === "string"
+			? frontmatter.tools.split(",").map((t: string) => t.trim()).filter(Boolean)
+			: undefined;
+
+		// enabled defaults to true; only explicit YAML boolean false disables
+		const enabled = frontmatter.enabled !== false;
 
 		agents.push({
 			name: frontmatter.name,
 			description: frontmatter.description,
 			tools: tools && tools.length > 0 ? tools : undefined,
-			model: frontmatter.model,
-			thinkingLevel: frontmatter.thinkingLevel,
+			model: typeof frontmatter.model === "string" ? frontmatter.model : undefined,
+			thinkingLevel: typeof frontmatter.thinkingLevel === "string" ? frontmatter.thinkingLevel : undefined,
 			systemPrompt: body,
 			source,
 			filePath,
+			enabled,
 		});
 	}
 
@@ -107,6 +129,7 @@ export function discoverAgents(cwd: string, scope: AgentScope): AgentDiscoveryRe
 
 	if (scope === "both") {
 		for (const agent of userAgents) agentMap.set(agent.name, agent);
+		// Project shadows user in both scope (including disabled state)
 		for (const agent of projectAgents) agentMap.set(agent.name, agent);
 	} else if (scope === "user") {
 		for (const agent of userAgents) agentMap.set(agent.name, agent);
@@ -114,7 +137,35 @@ export function discoverAgents(cwd: string, scope: AgentScope): AgentDiscoveryRe
 		for (const agent of projectAgents) agentMap.set(agent.name, agent);
 	}
 
-	return { agents: Array.from(agentMap.values()), projectAgentsDir };
+	// Return only enabled agents (disabled agents are excluded from runtime discovery)
+	const enabledAgents = Array.from(agentMap.values()).filter((a) => a.enabled);
+
+	return { agents: enabledAgents, projectAgentsDir };
+}
+
+/**
+ * List ALL physical agent definitions (no shadowing, no filtering).
+ * Used for management UI — shows every file regardless of enabled state.
+ */
+export function listAllPhysicalDefinitions(cwd: string): PhysicalAgentDefinition[] {
+	const userDir = path.join(getAgentDir(), "agents");
+	const projectAgentsDir = findNearestProjectAgentsDir(cwd);
+
+	const userConfigs = loadAgentsFromDir(userDir, "user");
+	const projectConfigs = projectAgentsDir ? loadAgentsFromDir(projectAgentsDir, "project") : [];
+
+	const toPhysical = (c: AgentConfig): PhysicalAgentDefinition => ({
+		name: c.name,
+		description: c.description,
+		model: c.model,
+		thinkingLevel: c.thinkingLevel,
+		tools: c.tools,
+		source: c.source,
+		filePath: c.filePath,
+		enabled: c.enabled,
+	});
+
+	return [...userConfigs.map(toPhysical), ...projectConfigs.map(toPhysical)];
 }
 
 export function formatAgentList(agents: AgentConfig[], maxItems: number): { text: string; remaining: number } {

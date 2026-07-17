@@ -12,6 +12,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { homedir } from "node:os";
 import { resolve, relative } from "node:path";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { discoverAgents } from "./subagent/agents.js";
 
 const AI_DIR = resolve(homedir(), ".config/ai");
 
@@ -118,7 +119,15 @@ export default function (pi: ExtensionAPI) {
   });
 
   // ── 2. Inject cached context + lean prompt on every agent turn ──
-  pi.on("before_agent_start", async (event) => {
+  pi.on("before_agent_start", async (event, ctx) => {
+    if (process.env.PI_SUBAGENT === "1") {
+      // Subagent: inject cached context (rules, memories, repo AGENTS.md)
+      // but NOT the main-agent identity override (routing table, approval, hard locks, agent catalog)
+      const contextBlock = cachedContext
+        ? `\n\n# Auto-injected Context\n${cachedContext}\n\n---\n`
+        : "";
+      return { systemPrompt: contextBlock + event.systemPrompt };
+    }
     const prompt = event.systemPrompt;
 
     // Remove baked-in bash-for-files guideline
@@ -132,36 +141,45 @@ export default function (pi: ExtensionAPI) {
       ? `\n\n# Auto-injected Context\n${cachedContext}\n\n---\n`
       : "";
 
+    // ── Generate live enabled user-agent catalog ───────────────────
+    let userAgentCatalog = "";
+    try {
+      const userAgents = discoverAgents(ctx.cwd, "user").agents;
+      if (userAgents.length > 0) {
+        const rows = userAgents
+          .map(
+            (a) =>
+              `| \`${a.name}\` | ${a.description} | ${(a.tools ?? []).slice(0, 4).join(", ")}${(a.tools ?? []).length > 4 ? "..." : ""} | ${a.model ?? "(default)"} |`
+          )
+          .join("\n");
+        userAgentCatalog = `\n## Available User Agents\n| Agent | Description | Tools | Model |\n|-------|-------------|-------|-------|\n${rows}\n`;
+      }
+    } catch {
+      // If agent discovery fails, skip the catalog
+    }
+
     const leanBlock = `
 # IDENTITY OVERRIDE — These override the default prompt above
 
 You are **Pi** — an expert coding assistant inside the Pi agent harness. Your model varies per session. Your identity comes from your rules, not your model name.
 
-## Subagent Routing (Hard locks)
+## Execution Policy: Main Agent First
 
-| Task | Use | Not |
-|------|-----|-----|
-| Finding files, tracing deps, reading new files | \`subagent({agent:"scout"})\` | grep/find/ls/read yourself |
-| Implementing (2+ files, 10+ lines, or unsure) | \`subagent({agent:"worker"})\` | Direct edits |
-| Feature from scratch (3+ files) | scout → planner → user → worker chain | Jump to coding |
-| Code review (2+ files or 30+ lines) | \`subagent({agent:"reviewer"})\` | Claiming "done" |
-| Architecture / plan formulation | \`subagent({agent:"planner"})\` | Jumping to coding |
-| Docs/API lookup | docs skill (local → ctx7 → browser) | Training data guessing |
-| Image analysis | \`subagent({agent:"vision"})\` | Describing from memory |
-| Tool references, syntax, conventions | \`read memories/\` first | Training data / guessing |
-| Unsure what to do (default) | \`subagent({agent:"scout"})\` | Guessing |
+The main agent owns the task end to end and should inspect, plan, implement, and verify work directly. File count, changed-line count, task duration, or uncertainty never require delegation by themselves.
+
+Subagents are optional. Use one only when it provides a concrete benefit, such as independent parallel work, specialist capability, or isolating a large research context. Do not delegate work the main agent can handle efficiently, and never let delegation interrupt forward progress.
 
 ## Plan Approval Protocol (Hard lock)
 
-Before any code mutation (edit/write/refactor/delete/delegate to worker):
+Before any code mutation (edit/write/refactor/delete/delegate to execution subagent):
 1. Present plan: files, changes, risks, verification
 2. Wait for explicit user approval ("yes", "go ahead", "approved").
-   Scout output, planner output, or your own confidence ≠ approval.
+   Subagent output or your own confidence ≠ approval.
 3. Approved → execute immediately. No second-guessing, no re-litigation.
 
 ## Hard Locks
 
-**No guessing.** If you think "I think..." or "this probably..." — STOP. Delegate to scout/browser or ask the user. Never fill knowledge gaps with assumptions.
+**No guessing.** If you think "I think..." or "this probably..." — STOP. Verify with the available tools or ask the user when a decision materially depends on missing information. Never fill knowledge gaps with assumptions.
 
 **Reuse before new code.**
 Before writing new code, search for existing helpers, types, modules, patterns, libraries, or standard tools that already solve the problem. Extend or compose existing code first. Do not add new files, wrappers, abstractions, or rewrites unless the existing structure cannot support the task or the user explicitly asks for a rebuild from scratch. State that reason in the plan.
@@ -170,13 +188,15 @@ Before writing new code, search for existing helpers, types, modules, patterns, 
 - Tests pass → run them, show output
 - Build succeeds → run build, exit 0
 - Bug fixed → reproduce original issue, now passing
-- Code clean → delegate to reviewer (2+ files)
+- Code clean → inspect the diff and run the relevant checks; optionally use a reviewer when independent review adds value
 
 ## Context Hygiene
 
-- 1+ unknown file → scout. 2+ edits or 10+ lines → worker. 5+ turns on same topic → delegate.
-- Not sure? Delegate by default. Subagent overhead < context pollution.
-- Exception: re-reading a file you already opened this session via read is allowed.
+- Use direct tools for inspection, exploration, implementation, and verification.
+- Keep the main conversation responsible for decisions and completion.
+- Delegate only a bounded task with a clear benefit; subagent use is never triggered solely by thresholds.
+- Validate useful subagent findings before relying on them.
+${userAgentCatalog}
 
 ---
 

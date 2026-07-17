@@ -1,5 +1,5 @@
 /**
- * /subagent-model — Interactive subagent model switcher
+ * /subagents — Interactive subagent model switcher
  *
  * Lets the user change the `model:` frontmatter line of a subagent definition
  * through a fully interactive, no-typing-required flow:
@@ -12,14 +12,20 @@
  *   6. If the model isn't enabled, offer to add it to settings.json
  *   7. For user agents, sync agents/AGENTS.md model table
  *
- * Optional typed shortcut (cheap): /subagent-model <agent> [<model>] [<thinkingLevel>]
+ * Optional typed shortcut (cheap): /subagents <agent> [<model>] [<thinkingLevel>]
  */
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { discoverAgents, type AgentConfig, type AgentScope } from "./subagent/agents.js";
+import {
+	discoverAgents,
+	listAllPhysicalDefinitions,
+	type AgentConfig,
+	type PhysicalAgentDefinition,
+	type AgentScope,
+} from "./subagent/agents.js";
 import { type ExtensionAPI, getAgentDir, withFileMutationQueue } from "@mariozechner/pi-coding-agent";
-import { Container, SelectList, Text, type SelectItem } from "@mariozechner/pi-tui";
+import { Container, SelectList, Text, type SelectItem, matchesKey, Key } from "@mariozechner/pi-tui";
 
 interface PickerItem {
 	value: string;
@@ -32,6 +38,8 @@ interface PickerItem {
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh"];
 // Sentinel value for "leave current thinking level unchanged".
 const UNCHANGED = "__unchanged__";
+// Sentinel value for "backspace with empty filter — go to prior menu".
+const BACK = "__back__";
 
 function splitModelThinking(
 	model: string,
@@ -95,8 +103,8 @@ function pick(
 				allowFilter
 					? filter
 						? theme.fg("dim", `filter: ${filter} (${active.length})`)
-						: theme.fg("dim", "↑↓ navigate • enter select • esc cancel • type to filter")
-					: theme.fg("dim", "↑↓ navigate • enter select • esc cancel"),
+						: theme.fg("dim", "↑↓ navigate • enter select • esc cancel • ⌫ back • type to filter")
+					: theme.fg("dim", "↑↓ navigate • enter select • esc cancel • ⌫ back"),
 			);
 		};
 
@@ -107,8 +115,13 @@ function pick(
 			invalidate: () => container.invalidate(),
 			handleInput: (data: string) => {
 				if (allowFilter) {
-					if (data === "\x7f" || data === "\x08") {
-						filter = filter.slice(0, -1);
+					if (matchesKey(data, Key.backspace)) {
+						if (filter.length > 0) {
+							filter = filter.slice(0, -1);
+						} else {
+							done(BACK);
+							return;
+						}
 					} else if (data.length === 1 && data.charCodeAt(0) >= 32 && data.charCodeAt(0) < 127) {
 						filter += data;
 					} else {
@@ -118,6 +131,10 @@ function pick(
 					applyFilter();
 					tui.requestRender();
 				} else {
+					if (matchesKey(data, Key.backspace)) {
+						done(BACK);
+						return;
+					}
 					list.handleInput(data);
 				}
 			},
@@ -150,7 +167,12 @@ function parseFrontmatter(content: string): { frontmatter: string | null; body: 
  */
 function writeAgentFrontmatterLine(filePath: string, key: string, value: string): void {
 	const content = fs.readFileSync(filePath, "utf-8");
-	const { frontmatter, body, hadFinalNewline } = parseFrontmatter(content);
+
+	// Detect and preserve CRLF line endings, normalize to LF for parsing
+	const hasCRLF = /\r\n/.test(content);
+	const normalized = hasCRLF ? content.replace(/\r\n/g, "\n") : content;
+
+	const { frontmatter, body, hadFinalNewline } = parseFrontmatter(normalized);
 
 	let nextFm: string;
 	if (frontmatter !== null) {
@@ -168,56 +190,18 @@ function writeAgentFrontmatterLine(filePath: string, key: string, value: string)
 	}
 
 	const nextBody = body.length > 0 ? (hadFinalNewline ? body : body + "\n") : "";
-	const updated = `---\n${nextFm}\n---\n${nextBody}`;
+	let updated = `---\n${nextFm}\n---\n${nextBody}`;
+
+	// Restore original line-ending convention
+	if (hasCRLF) {
+		updated = updated.replace(/\n/g, "\r\n");
+	}
 
 	// Guard against a silent no-op: the resulting frontmatter must carry the field.
-	if (!updated.includes(`${key}: ${value}`)) {
+	if (!updated.replace(/\r\n/g, "\n").includes(`${key}: ${value}`)) {
 		throw new Error(`Failed to set ${key} in ${filePath}`);
 	}
 	fs.writeFileSync(filePath, updated, "utf-8");
-}
-
-/**
- * Update the `model` cell for an agent row in agents/AGENTS.md.
- *
- * The row marker and the per-line replacement use a function (not a `$`-interpolated
- * string), so a model ID containing `$` cannot corrupt the output. Returns true when a
- * matching row was found and updated, false otherwise, so the caller can warn if the
- * doc table was not synced.
- */
-function syncAgentsDocTable(agentName: string, newModel?: string, newThinking?: string): boolean {
-	const docPath = path.join(getAgentDir(), "agents", "AGENTS.md");
-	if (!fs.existsSync(docPath)) return false;
-
-	const escaped = agentName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-	const rowMarker = new RegExp("\\*\\*`" + escaped + "`\\*\\*");
-	const content = fs.readFileSync(docPath, "utf-8");
-	if (!rowMarker.test(content)) return false;
-
-	// Model is the 2nd column; thinking (when present) is the 3rd column.
-	const modelRe = /^(\| \*\*`.*?`\*\* \| )`[^`]*`/;
-	const thinkingRe = /^(\| \*\*`.*?`\*\* \| `[^`]*` \| )`[^`]*`/;
-
-	let updated = false;
-	const replaced = content
-		.split("\n")
-		.map((line) => {
-			if (!rowMarker.test(line)) return line;
-			let out = line;
-			// Replacement functions: `$` in values is treated literally.
-			if (newModel !== undefined) {
-				out = out.replace(modelRe, (_m, prefix: string) => `${prefix}\`${newModel}\``);
-			}
-			if (newThinking !== undefined) {
-				out = out.replace(thinkingRe, (_m, prefix: string) => `${prefix}\`${newThinking}\``);
-			}
-			if (out !== line) updated = true;
-			return out;
-		})
-		.join("\n");
-
-	if (updated) fs.writeFileSync(docPath, replaced, "utf-8");
-	return updated;
 }
 
 function collectKnownModels(): { full: string; provider: string }[] {
@@ -234,12 +218,12 @@ function collectKnownModels(): { full: string; provider: string }[] {
 }
 
 export default function subagentModelsExtension(pi: ExtensionAPI) {
-	pi.registerCommand("subagent-model", {
+	pi.registerCommand("subagents", {
 		description:
-			"Interactively change a subagent's model and thinking level. Pick scope, agent, model, and thinking level; writes the model:/thinkingLevel: frontmatter lines. Optional args: <agent> [<model>] [<thinkingLevel>].",
+			"Manage subagent model, thinking level, and availability. Interactive: pick action, then configure. Optional shortcut: <agent> [<model>] [<thinkingLevel>].",
 		handler: async (args: string, ctx: any) => {
 			if (!ctx.hasUI) {
-				ctx.ui.notify("/subagent-model requires interactive mode", "error");
+				ctx.ui.notify("/subagents requires interactive mode", "error");
 				return;
 			}
 
@@ -286,191 +270,406 @@ export default function subagentModelsExtension(pi: ExtensionAPI) {
 			modelItems.length = 0;
 			modelItems.push(...dedupedModels);
 
-			// Optional typed shortcut: <agent> [<model>] [<thinkingLevel>]
+			// ── Decide flow: shortcut vs interactive first action ───────
 			const shortcut = args.trim();
-			let presetAgent: string | null = null;
-			let presetModel: string | null = null;
-			let presetThinking: string | null = null;
+
 			if (shortcut) {
-				const parts = shortcut.split(/\s+/);
-				presetAgent = parts[0] ?? null;
-				presetModel = parts[1] ?? null;
-				if (presetModel) {
-					const parsed = splitModelThinking(presetModel, seenModels);
-					presetModel = parsed.model;
-					presetThinking = parsed.thinking;
-				}
-				if (parts[2]) {
-					if (!THINKING_LEVELS.includes(parts[2])) {
-						ctx.ui.notify(
-							`Invalid thinking level "${parts[2]}". Use one of: ${THINKING_LEVELS.join(", ")}`,
-							"error",
-						);
-						return;
-					}
-					if (presetThinking && presetThinking !== parts[2]) {
-						ctx.ui.notify(
-							`Conflicting thinking levels: model suffix uses "${presetThinking}" but shortcut uses "${parts[2]}".`,
-							"error",
-						);
-						return;
-					}
-					presetThinking = parts[2];
-				}
-			}
-
-			// 1. Scope
-			let scope: AgentScope = "user";
-			if (!presetAgent) {
-				const scopeVal = await pick(
-					ctx,
-					"Select agent scope",
-					[
-						{ value: "user", label: "User agents  (~/.config/ai/agents)", search: "user agents" },
-						{ value: "project", label: "Project agents  (.pi/agents)", search: "project agents" },
-						{ value: "both", label: "Both  (user + project)", search: "both user project" },
-					],
-					false,
-				);
-				if (!scopeVal) {
-					ctx.ui.notify("Canceled.", "info");
-					return;
-				}
-				scope = scopeVal as AgentScope;
+				// Typed shortcut: /subagents <agent> [<model>] [<thinkingLevel>]
+				await runModelThinkingFlow(ctx, shortcut, seenModels, modelItems, settingsPath, enabled);
 			} else {
-				// When a shortcut names an agent, search across both scopes to find it.
-				scope = "both";
+				// Interactive: pick action first, loop after flow completes
+				while (true) {
+					const actionVal = await pick(
+						ctx,
+						"What do you want to configure?",
+						[
+							{
+								value: "model",
+								label: "Model / Thinking",
+								description: "Change the model or thinking level of an agent",
+								search: "model thinking change model" ,
+							},
+							{
+								value: "availability",
+								label: "Manage availability",
+								description: "Enable or disable agents",
+								search: "availability enable disable toggle agent",
+							},
+						],
+						false,
+					);
+					if (!actionVal || actionVal === BACK) {
+						ctx.ui.notify("Canceled.", "info");
+						return;
+					}
+
+					if (actionVal === "model") {
+						const shouldLoop = await runModelThinkingFlow(ctx, shortcut, seenModels, modelItems, settingsPath, enabled);
+						if (!shouldLoop) return;
+					} else if (actionVal === "availability") {
+						const shouldLoop = await runAvailabilityFlow(ctx);
+						if (!shouldLoop) return;
+					}
+				}
 			}
 
-			// 2. Agent
-			const discovery = discoverAgents(ctx.cwd, scope);
-			const agents = discovery.agents;
-			if (agents.length === 0) {
-				ctx.ui.notify(`No agents found for scope "${scope}".`, "warning");
-				return;
-			}
+		},
+	});
+}
 
-			let selected: AgentConfig | undefined;
+/**
+ * Three-way confirmation dialog that distinguishes Confirm, Back, and Cancel.
+ * Returns "confirm" on Enter, "back" on Backspace, "cancel" on Escape.
+ */
+async function confirmOrBack(
+	ctx: any,
+	title: string,
+	message: string,
+): Promise<"confirm" | "back" | "cancel"> {
+	return ctx.ui.custom<"confirm" | "back" | "cancel">((tui: any, theme: any, _kb: any, done: (val: "confirm" | "back" | "cancel") => void) => {
+		const titleComp = new Text(theme.fg("accent", theme.bold(title)), 1, 0);
+		const msgComp = new Text(message, 1, 0);
+		const helpComp = new Text(
+			theme.fg("dim", "Enter confirm \u2022 \u232b back \u2022 Esc cancel"),
+			1, 0,
+		);
+		const container = new Container();
+		container.addChild(titleComp);
+		container.addChild(msgComp);
+		container.addChild(helpComp);
+
+		return {
+			render: (w: number) => container.render(w),
+			invalidate: () => container.invalidate(),
+			handleInput: (data: string) => {
+				if (matchesKey(data, Key.enter)) {
+					done("confirm");
+				} else if (matchesKey(data, Key.escape)) {
+					done("cancel");
+				} else if (matchesKey(data, Key.backspace)) {
+					done("back");
+				}
+			},
+		};
+	});
+}
+
+/**
+ * Run the model/thinking change flow with back-navigation.
+ * Returns true if caller should return to action menu, false if canceled (exit).
+ */
+async function runModelThinkingFlow(
+	ctx: any,
+	shortcut: string,
+	seenModels: Set<string>,
+	modelItems: PickerItem[],
+	settingsPath: string,
+	enabled: string[],
+): Promise<boolean> {
+	let presetAgent: string | null = null;
+	let presetModel: string | null = null;
+	let presetThinking: string | null = null;
+
+	if (shortcut) {
+		const parts = shortcut.split(/\s+/);
+		presetAgent = parts[0] ?? null;
+		presetModel = parts[1] ?? null;
+		if (presetModel) {
+			const parsed = splitModelThinking(presetModel, seenModels);
+			presetModel = parsed.model;
+			presetThinking = parsed.thinking;
+		}
+		if (parts[2]) {
+			if (!THINKING_LEVELS.includes(parts[2])) {
+				ctx.ui.notify(
+					`Invalid thinking level "${parts[2]}". Use one of: ${THINKING_LEVELS.join(", ")}`,
+					"error",
+				);
+				return true;
+			}
+			if (presetThinking && presetThinking !== parts[2]) {
+				ctx.ui.notify(
+					`Conflicting thinking levels: model suffix uses "${presetThinking}" but shortcut uses "${parts[2]}".`,
+					"error",
+				);
+				return true;
+			}
+			presetThinking = parts[2];
+		}
+	}
+
+	// In shortcut mode, Backspace cancels (no action menu to return to).
+	const isShortcut = Boolean(shortcut);
+
+	// ── State machine for nested picker steps with back-navigation ───
+	// 0=scope, 1=agent, 2=model, 3=thinking, 4=confirm/write
+	// Steps are always visited sequentially; presets auto-answer at each step.
+	let step = 0;
+
+	let scope: AgentScope = "user";
+	let selected: AgentConfig | undefined;
+	let newModel: string | undefined;
+	let newThinking: string | null = null;
+
+	while (true) {
+		// ── 0: Scope pick ──────────────────────────────────────────
+		if (step <= 0) {
+			if (isShortcut) { scope = "user"; step = 1; continue; }
+
+			const scopeVal = await pick(
+				ctx,
+				"Select agent scope",
+				[
+					{ value: "user", label: "User agents  (~/.config/ai/agents)", search: "user agents" },
+					{ value: "project", label: "Project agents  (.pi/agents)", search: "project agents" },
+					{ value: "both", label: "Both  (user + project)", search: "both user project" },
+				],
+				false,
+			);
+			if (scopeVal === null) { ctx.ui.notify("Canceled.", "info"); return false; }
+			if (scopeVal === BACK) return !isShortcut;
+			scope = scopeVal as AgentScope;
+			step = 1;
+			continue;
+		}
+
+		// ── 1: Agent pick ──────────────────────────────────────────
+		if (step <= 1) {
 			if (presetAgent) {
-				// Prefer the user agent when both user and project agents share the name.
 				const userMatch = discoverAgents(ctx.cwd, "user").agents.find((a) => a.name === presetAgent);
 				const projMatch = discoverAgents(ctx.cwd, "project").agents.find((a) => a.name === presetAgent);
 				selected = userMatch ?? projMatch;
 				if (!selected) {
 					ctx.ui.notify(`Agent "${presetAgent}" not found.`, "warning");
-					return;
+					return !isShortcut;
 				}
-			} else {
-				const agentItems: PickerItem[] = agents.map((a) => ({
-					value: a.name,
-					label: `${a.name}  (${a.source})`,
-					description: `model: ${a.model ?? "(none)"}; thinking: ${a.thinkingLevel ?? "(none)"}`,
-					search: `${a.name} ${a.source} ${a.model ?? ""} ${a.thinkingLevel ?? ""}`.toLowerCase(),
-				}));
-				const agentVal = await pick(ctx, "Select agent to re-model", agentItems, false);
-				if (!agentVal) {
-					ctx.ui.notify("Canceled.", "info");
-					return;
-				}
-				selected = agents.find((a) => a.name === agentVal);
+				step = 2;
+				continue;
 			}
-			if (!selected) return;
 
-			// 3. Model
-			let newModel: string;
+			const discovery = discoverAgents(ctx.cwd, scope);
+			const agents = discovery.agents;
+			if (agents.length === 0) {
+				ctx.ui.notify(`No agents found for scope "${scope}".`, "warning");
+				step = 0;
+				continue;
+			}
+
+			const agentItems: PickerItem[] = agents.map((a) => ({
+				value: a.name,
+				label: `${a.name}  (${a.source})`,
+				description: `model: ${a.model ?? "(none)"}; thinking: ${a.thinkingLevel ?? "(none)"}`,
+				search: `${a.name} ${a.source} ${a.model ?? ""} ${a.thinkingLevel ?? ""}`.toLowerCase(),
+			}));
+			const agentVal = await pick(ctx, "Select agent to re-model", agentItems, false);
+			if (agentVal === null) { ctx.ui.notify("Canceled.", "info"); return false; }
+			if (agentVal === BACK) {
+				if (isShortcut) { ctx.ui.notify("Canceled.", "info"); return false; }
+				step = 0; continue;
+			}
+			selected = agents.find((a) => a.name === agentVal);
+			if (!selected) return !isShortcut;
+			step = 2;
+			continue;
+		}
+
+		// ── 2: Model pick ──────────────────────────────────────────
+		if (step <= 2) {
 			if (presetModel) {
 				newModel = presetModel;
-			} else {
-				if (modelItems.length === 0) {
-					ctx.ui.notify("No models available.", "warning");
-					return;
-				}
-				const modelVal = await pick(ctx, `Select model for ${selected.name}`, modelItems, true);
-				if (!modelVal) {
-					ctx.ui.notify("Canceled.", "info");
-					return;
-				}
-				newModel = modelVal;
+				step = 3;
+				continue;
 			}
 
-			const oldModel = selected.model ?? "(none)";
-			const oldThinking = selected.thinkingLevel ?? "(none)";
+			if (modelItems.length === 0) {
+				ctx.ui.notify("No models available.", "warning");
+				step = 1;
+				continue;
+			}
+			const modelVal = await pick(ctx, `Select model for ${selected!.name}`, modelItems, true);
+			if (modelVal === null) { ctx.ui.notify("Canceled.", "info"); return false; }
+			if (modelVal === BACK) {
+				if (isShortcut) { ctx.ui.notify("Canceled.", "info"); return false; }
+				newModel = undefined; newThinking = null; step = 1; continue;
+			}
+			newModel = modelVal;
+			step = 3;
+			continue;
+		}
 
-			// 3b. Thinking level. Prompt interactively whenever the model was chosen
-			// interactively (no preset model). A preset 2-arg shortcut leaves it unchanged.
-			let newThinking: string | null = null;
+		// ── 3: Thinking pick ──────────────────────────────────────
+		if (step <= 3) {
 			if (presetThinking) {
 				newThinking = presetThinking;
-			} else if (!presetModel) {
-				const thinkingItems: PickerItem[] = [
-					{
-						value: UNCHANGED,
-						label: "Leave unchanged",
-						description: `current: ${oldThinking}`,
-						search: "leave unchanged current skip",
-					},
-					...THINKING_LEVELS.map((lvl) => ({
-						value: lvl,
-						label: lvl,
-						description: lvl === selected.thinkingLevel ? "current" : undefined,
-						search: lvl,
-					})),
-				];
-				const thinkingVal = await pick(ctx, `Select thinking level for ${selected.name}`, thinkingItems, true);
-				if (!thinkingVal) {
-					ctx.ui.notify("Canceled.", "info");
-					return;
-				}
-				if (thinkingVal !== UNCHANGED) newThinking = thinkingVal;
+				step = 4;
+				continue;
 			}
+			// When model was preset, skip thinking pick (thinking from model suffix).
+			if (presetModel) { step = 4; continue; }
 
-			// 4. Confirm
-			const changeLines = [`model: ${oldModel}  →  ${newModel}`];
-			if (newThinking !== null) changeLines.push(`thinkingLevel: ${oldThinking}  →  ${newThinking}`);
-			const ok = await ctx.ui.confirm(`Change ${selected.name}?`, changeLines.join("\n"));
-			if (!ok) {
+			const oldThinking = selected!.thinkingLevel ?? "(none)";
+			const thinkingItems: PickerItem[] = [
+				{
+					value: UNCHANGED,
+					label: "Leave unchanged",
+					description: `current: ${oldThinking}`,
+					search: "leave unchanged current skip",
+				},
+				...THINKING_LEVELS.map((lvl) => ({
+					value: lvl,
+					label: lvl,
+					description: lvl === selected!.thinkingLevel ? "current" : undefined,
+					search: lvl,
+				})),
+			];
+			const thinkingVal = await pick(ctx, `Select thinking level for ${selected!.name}`, thinkingItems, true);
+			if (thinkingVal === null) { ctx.ui.notify("Canceled.", "info"); return false; }
+			if (thinkingVal === BACK) {
+				if (isShortcut) { ctx.ui.notify("Canceled.", "info"); return false; }
+				newThinking = null; step = 2; continue;
+			}
+			if (thinkingVal !== UNCHANGED) newThinking = thinkingVal;
+			step = 4;
+			continue;
+		}
+
+		// ── 4: Confirm + write ─────────────────────────────────────
+		const oldModel = selected!.model ?? "(none)";
+		const oldThinking = selected!.thinkingLevel ?? "(none)";
+		const changeLines = [`model: ${oldModel}  →  ${newModel}`];
+		if (newThinking !== null) changeLines.push(`thinkingLevel: ${oldThinking}  →  ${newThinking}`);
+
+		const confirmResult = await confirmOrBack(ctx, `Change ${selected!.name}?`, changeLines.join("\n"));
+		if (confirmResult === "cancel") {
+			ctx.ui.notify("Canceled.", "info");
+			return false;
+		}
+		if (confirmResult === "back") {
+			// Go back to the last interactive pick step
+			if (!presetModel && !presetThinking) step = 3;
+			else if (!presetModel) step = 2;
+			else if (!presetAgent) step = 1;
+			else {
+				// All steps were preset (full shortcut); cancel.
 				ctx.ui.notify("Canceled.", "info");
-				return;
+				return false;
 			}
+			// Reset downstream state for the target step
+			if (step === 3) newThinking = null;
+			if (step === 2) { newModel = undefined; newThinking = null; }
+			if (step === 1) { newModel = undefined; newThinking = null; }
+			continue;
+		}
 
-			// 5. Write agent frontmatter lines
-			await withFileMutationQueue(selected.filePath, async () => {
-				writeAgentFrontmatterLine(selected!.filePath, "model", newModel);
-				if (newThinking !== null) writeAgentFrontmatterLine(selected!.filePath, "thinkingLevel", newThinking);
-			});
+		// Write agent frontmatter
+		await withFileMutationQueue(selected!.filePath, async () => {
+			writeAgentFrontmatterLine(selected!.filePath, "model", newModel!);
+			if (newThinking !== null) writeAgentFrontmatterLine(selected!.filePath, "thinkingLevel", newThinking);
+		});
 
-			if (selected.source === "user") {
-				const docUpdated = await withFileMutationQueue(
-					path.join(getAgentDir(), "agents", "AGENTS.md"),
-					async () => syncAgentsDocTable(selected!.name, newModel, newThinking ?? undefined),
-				);
-				if (!docUpdated) {
-					ctx.ui.notify(
-						`Wrote ${selected.name} model/thinking, but agents/AGENTS.md row was not updated (no matching row).`,
-						"warning",
-					);
+		// Offer to enable model
+		if (!enabled.includes(newModel!) && fs.existsSync(settingsPath)) {
+			const add = await ctx.ui.confirm(
+				"Enable model?",
+				`${newModel} is not in settings.json enabledModels. Add it?`,
+			);
+			if (add) {
+				await withFileMutationQueue(settingsPath, async () => {
+					const s = readJson(settingsPath);
+					const list2: string[] = Array.isArray(s.enabledModels) ? s.enabledModels : [];
+					if (!list2.includes(newModel!)) list2.push(newModel!);
+					s.enabledModels = list2;
+					fs.writeFileSync(settingsPath, JSON.stringify(s, null, 2) + "\n", "utf-8");
+				});
+				ctx.ui.notify(`Added ${newModel} to enabledModels.`, "info");
+			}
+		}
+
+		ctx.ui.notify(`Set ${selected!.name}: ${oldModel} → ${newModel}`, "info");
+		return true; // back to action menu
+	}
+}
+
+/**
+ * Run the availability management flow.
+ *
+ * Backspace / Escape / Done all return to the action menu.
+ */
+async function runAvailabilityFlow(ctx: any): Promise<boolean> {
+	while (true) {
+		const defs = listAllPhysicalDefinitions(ctx.cwd);
+
+		// Resolve symlinks to avoid duplicates by physical file
+		const seen = new Set<string>();
+		const canonical: PhysicalAgentDefinition[] = [];
+		for (const d of defs) {
+			try {
+				const resolved = fs.realpathSync(d.filePath);
+				if (seen.has(resolved)) continue;
+				seen.add(resolved);
+				canonical.push(d);
+			} catch {
+				if (!seen.has(d.filePath)) {
+					seen.add(d.filePath);
+					canonical.push(d);
 				}
 			}
+		}
 
-			// 6. Offer to enable model if not already enabled
-			if (!enabled.includes(newModel) && fs.existsSync(settingsPath)) {
-				const add = await ctx.ui.confirm(
-					"Enable model?",
-					`${newModel} is not in settings.json enabledModels. Add it?`,
-				);
-				if (add) {
-					await withFileMutationQueue(settingsPath, async () => {
-						const s = readJson(settingsPath);
-						const list2: string[] = Array.isArray(s.enabledModels) ? s.enabledModels : [];
-						if (!list2.includes(newModel)) list2.push(newModel);
-						s.enabledModels = list2;
-						fs.writeFileSync(settingsPath, JSON.stringify(s, null, 2) + "\n", "utf-8");
-					});
-					ctx.ui.notify(`Added ${newModel} to enabledModels.`, "info");
-				}
-			}
+		if (canonical.length === 0) {
+			ctx.ui.notify("No agent definitions found.", "warning");
+			return true;
+		}
 
-			ctx.ui.notify(`Set ${selected.name}: ${oldModel} → ${newModel}`, "info");
-		},
-	});
+		const agentItems: PickerItem[] = canonical.map((d) => {
+			const stateIcon = d.enabled ? "✓" : "✗";
+			const stateLabel = d.enabled ? "enabled" : "disabled";
+			const modelStr = d.model ? `model: ${d.model}` : "";
+			return {
+				value: d.filePath,
+				label: `${stateIcon}  ${d.name}  (${d.source})`,
+				description: `${stateLabel} · ${d.description}${modelStr ? " · " + modelStr : ""}`,
+				search: `${d.name} ${d.source} ${d.enabled ? "enabled" : "disabled"} ${d.description} ${d.model ?? ""}`.toLowerCase(),
+			};
+		});
+
+		// Add a "Done" option at the top
+		agentItems.unshift({
+			value: "__done__",
+			label: "Done  (exit)",
+			description: "Finish managing availability",
+			search: "done exit finish quit complete",
+		});
+
+		const agentVal = await pick(ctx, "Toggle agent availability (select to toggle)", agentItems, true);
+		if (!agentVal || agentVal === BACK || agentVal === "__done__") {
+			ctx.ui.notify("Done.", "info");
+			return true;
+		}
+
+		// Find the definition by filePath
+		const def = canonical.find((d) => d.filePath === agentVal);
+		if (!def) return true;
+
+		const newEnabled = !def.enabled;
+		const action = newEnabled ? "enable" : "disable";
+		const ok = await ctx.ui.confirm(
+			`${action} ${def.name}?`,
+			`${def.name} (${def.source})
+${def.description}
+Current: ${def.enabled ? "enabled" : "disabled"} → ${newEnabled ? "enabled" : "disabled"}`,
+		);
+		if (!ok) {
+			ctx.ui.notify("Skipped.", "info");
+			continue;
+		}
+
+		// Write enabled: true|false to frontmatter
+		await withFileMutationQueue(def.filePath, async () => {
+			writeAgentFrontmatterLine(def!.filePath, "enabled", newEnabled ? "true" : "false");
+		});
+
+		ctx.ui.notify(`Set ${def.name} → ${newEnabled ? "enabled" : "disabled"}. Refreshing list...`, "info");
+		// Loop continues with refreshed list
+	}
 }
