@@ -28,8 +28,6 @@ extensions/pi-tts/bin/
 rules/local-*.md
 memories/local-*/
 
-# Next.js docs installed by bootstrap (portable, machine-local; not a repo path)
-docs/next.js/
 
 # pi-tts: uv-managed virtualenv + generated wrapper (pinned by setup.sh)
 extensions/pi-tts/.venv/

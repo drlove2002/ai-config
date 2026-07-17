@@ -2,11 +2,11 @@
 # bootstrap/setup.sh — macOS onboarding entrypoint for the Worldwide AI config.
 #
 # Generic for any Mac user. Installs brew/uv/node/pi, adopts this repo into
-# ~/.config/ai, links it into ~/.pi/agent, configures providers, fetches docs,
+# ~/.config/ai, links it into ~/.pi/agent, configures providers,
 # optionally links a local nix agent overlay, and installs Pocket TTS.
 #
 # Usage:
-#   ./bootstrap/setup.sh [--skip-docs] [--skip-tts] [--dry-run]
+#   ./bootstrap/setup.sh [--skip-tts] [--dry-run]
 #
 # The script runs onboard.py (Python 3) for the heavy lifting.
 

@@ -13,10 +13,9 @@ required. Nix, if present, is an optional overlay only.
 6. Clones this repo into `~/.config/ai` (or adopts it in place; prompts before backing up an existing non-repo dir). HTTPS by default; override with `AI_CONFIG_REPO`.
 7. Symlinks `~/.config/ai` items into `~/.pi/agent` — never overwriting `auth.json` or `sessions`. Real conflicting files are backed up.
 8. Provider onboarding: runs `pi /login` (GPT Codex) and prompts for the Opencode Zen key (writes `~/.config/.env` `ZEN_OPENCODE_API`, `chmod 600`). Command Code optional.
-9. Docs: runs `scripts/fetch-docs.sh` (discord.py/nextcord) and installs Next.js docs from the pinned npm tarball into `~/.config/ai/docs/next.js` (no `/data` path).
-10. Optional nix overlay: links `rules/*.md` / `memories/*.md` from an overlay dir into gitignored `rules/local-*.md` / `memories/local-nix/`. If nix exists but no overlay, generates a minimal `rules/local-nix.md`. Else removes it.
-11. Runs `extensions/pi-tts/setup.sh` (permanent uv venv, no nix).
-12. Verifies (JSON parse, symlinks, `pi --version`, docs dirs, TTS wrapper) and writes `~/.config/ai/.bootstrap-manifest.json`.
+9. Optional nix overlay: links `rules/*.md` / `memories/*.md` from an overlay dir into gitignored `rules/local-*.md` / `memories/local-nix/`. If nix exists but no overlay, generates a minimal `rules/local-nix.md`. Else removes it.
+10. Runs `extensions/pi-tts/setup.sh` (permanent uv venv, no nix).
+11. Verifies (JSON parse, symlinks, `pi --version`, TTS wrapper) and writes `~/.config/ai/.bootstrap-manifest.json`.
 
 ## Usage
 
@@ -30,7 +29,6 @@ Or after cloning:
 
 ```bash
 ./bootstrap/setup.sh                # full run
-./bootstrap/setup.sh --skip-docs    # skip doc fetch
 ./bootstrap/setup.sh --skip-tts     # skip Pocket TTS install
 ./bootstrap/setup.sh --dry-run      # print actions, change nothing
 ```

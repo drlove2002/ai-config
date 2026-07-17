@@ -2,11 +2,11 @@
 """Bootstrap orchestrator for the Worldwide AI config on macOS.
 
 Generic for any Mac user. Installs Homebrew, uv, node, and pi; clones (or adopts)
-this repo into ~/.config/ai; links it into ~/.pi/agent; sets up providers; fetches
-docs; optionally links a local nix agent overlay; and installs Pocket TTS.
+this repo into ~/.config/ai; links it into ~/.pi/agent; sets up providers;
+optionally links a local nix agent overlay; and installs Pocket TTS.
 
 Run via bootstrap/setup.sh. Can also be invoked directly:
-    python3 bootstrap/onboard.py [--skip-docs] [--skip-tts] [--dry-run]
+    python3 bootstrap/onboard.py [--skip-tts] [--dry-run]
 """
 
 from __future__ import annotations
@@ -262,43 +262,7 @@ def setup_providers(dry_run: bool) -> None:
     log("Command Code is optional; not required.")
 
 
-# ── Docs ──
 
-def fetch_docs(dry_run: bool) -> None:
-    fetch_script = AI_DIR / "scripts" / "fetch-docs.sh"
-    if fetch_script.exists():
-        try:
-            run(["bash", str(fetch_script)], check=False)
-        except Exception:
-            log("WARN: fetch-docs.sh failed (discord.py/nextcord).")
-    else:
-        log("WARN: scripts/fetch-docs.sh missing; skipping discord.py/nextcord docs.")
-
-    # Next.js docs from pinned npm tarball into ~/.config/ai/docs/next.js.
-    # Guard against a dangling/foreign symlink (never follow it). The target
-    # must be a real directory created locally so docs are portable.
-    target = AI_DIR / "docs" / "next.js"
-    if target.is_symlink():
-        log("Removing dangling/following docs/next.js symlink; will recreate as a real dir.")
-        if not dry_run:
-            target.unlink()
-    elif target.exists():
-        log("Next.js docs already present; skipping.")
-        return
-    log("Installing Next.js docs from npm tarball into ~/.config/ai/docs/next.js ...")
-    tmp = Path("/tmp") / "nextjs-docs-tmp"
-    if not dry_run:
-        if tmp.exists():
-            shutil.rmtree(tmp)
-        tmp.mkdir(parents=True)
-        try:
-            run(["bash", "-lc",
-                 f"cd {tmp} && npm pack next@latest && tar -xzf next-*.tgz && "
-                 f"mkdir -p {target} && cp -R package/dist/docs/. {target}/"],
-                check=True, shell=False)
-            log("Next.js docs installed.")
-        except subprocess.CalledProcessError:
-            log("WARN: Next.js docs install failed; will retry on next run.")
 
 
 # ── Optional nix overlay ──
@@ -441,14 +405,13 @@ def verify(dry_run: bool) -> dict:
             for item in LINK_ITEMS
             if (AI_DIR / item).exists()
         )
-        checks["docs_nextjs"] = (AI_DIR / "docs" / "next.js").exists()
-        checks["docs_discordpy"] = (AI_DIR / "docs" / "discord.py").exists()
+
         checks["tts_wrapper"] = (AI_DIR / "extensions" / "pi-tts" / "bin" / "pocket-tts-cli").exists()
     except Exception as e:
         checks["symlinks_ok"] = f"ERROR: {e}"
 
     # Validate JSON files touched.
-    for jf in ("pi-tts.json", "docs/index.json", "models.json", "settings.json"):
+    for jf in ("pi-tts.json", "models.json", "settings.json"):
         p = AI_DIR / jf
         if p.exists():
             try:
@@ -476,7 +439,6 @@ def write_manifest(checks: dict, dry_run: bool) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="macOS AI config bootstrap")
-    ap.add_argument("--skip-docs", action="store_true", help="skip docs fetch")
     ap.add_argument("--skip-tts", action="store_true", help="skip Pocket TTS setup")
     ap.add_argument("--dry-run", action="store_true", help="print actions, change nothing")
     args = ap.parse_args()
@@ -494,8 +456,7 @@ def main() -> int:
         ensure_repo(args.dry_run)
         link_config(args.dry_run)
         setup_providers(args.dry_run)
-        if not args.skip_docs:
-            fetch_docs(args.dry_run)
+
         link_nix_overlay(args.dry_run)
         if not args.skip_tts:
             setup_tts(args.dry_run)

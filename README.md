@@ -9,13 +9,13 @@ My personal global configuration, skills, and extensions for the [`pi` coding ag
 - `memories/`: Durable technical preferences, technology choices, and project guidelines.
 - `rules/`: Core operating policies, behavior guidelines, and constraints.
 - `skills/`: Reusable, intent-based markdown workflows (TDD, bug triage, refactoring plans, domain-driven design, etc.).
-- `bootstrap/`: Standalone macOS onboarding (installs brew, uv, node, pi; links config; sets up providers + docs). Generic for any Mac user.
+- `bootstrap/`: Standalone macOS onboarding (installs brew, uv, node, pi; links config; sets up providers). Generic for any Mac user.
 
 ## Setup
 
 ### One-shot macOS onboarding (recommended)
 
-Runs on any Mac, installs prerequisites, clones this repo into `~/.config/ai`, links it into `~/.pi/agent`, configures providers, fetches docs, and installs the Pocket TTS backend. See `bootstrap/README.md` for details.
+Runs on any Mac, installs prerequisites, clones this repo into `~/.config/ai`, links it into `~/.pi/agent`, configures providers, and installs the Pocket TTS backend. See `bootstrap/README.md` for details.
 
 ```bash
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/drlove2002/ai-config/main/bootstrap/bootstrap.sh)"
