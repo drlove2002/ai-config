@@ -2,7 +2,7 @@
 name: scout
 description: Fast codebase recon that returns compressed context for handoff to other agents
 tools: read, grep, find, ls, bash
-model: commandcode/tencent/Hy3
+model: opencode-zen/deepseek-v4-flash-free
 thinkingLevel: low
 ---
 

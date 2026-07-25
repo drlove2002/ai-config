@@ -2,7 +2,7 @@
 name: planner
 description: Creates implementation plans from context and requirements
 tools: read, grep, find, ls, browser
-model: commandcode/tencent/Hy3
+model: commandcode/deepseek/deepseek-v4-pro
 thinkingLevel: low
 ---
 

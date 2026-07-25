@@ -2,7 +2,7 @@
 name: reviewer
 description: Code review specialist for quality and security analysis
 tools: read, grep, find, ls, bash, browser
-model: commandcode/tencent/Hy3
+model: commandcode/deepseek/deepseek-v4-pro
 thinkingLevel: low
 ---
 

@@ -2,7 +2,7 @@
 name: worker
 description: General-purpose subagent with full capabilities, isolated context
 tools: read, edit, write, bash, grep, find, ls, browser
-model: commandcode/deepseek/deepseek-v4-pro
+model: opencode-zen/deepseek-v4-flash-free
 thinkingLevel: low
 ---
 
